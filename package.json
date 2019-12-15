@@ -1,0 +1,10 @@
+{
+  "name": "rizzmi-elm-graphql-project",
+  "version": "0.0.0",
+  "scripts": {
+    "api": "elm-graphql http://127.0.0.1:5000/graphql --base GQL"
+  },
+  "devDependencies": {
+    "@dillonkearns/elm-graphql": "^3.6.2"
+  }
+}
