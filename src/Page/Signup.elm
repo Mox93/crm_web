@@ -108,41 +108,44 @@ view model =
 
 viewForm : Form -> Element Msg
 viewForm form =
-    Layout.vCard
-        [ Layout.viewHeader "Sign up"
-        , row
-            [ centerX
-            , Font.color Brand.subtleTextColor
-            , Font.size <| Brand.scaled 1
+    Layout.card <|
+        column
+            [ spacing <| Brand.scaled 1
             ]
-            [ text "A rizzmi member? "
-            , link
-                [ Font.color Brand.primaryColor
-                , Font.semiBold
+            [ Layout.viewHeader "Sign up"
+            , row
+                [ centerX
+                , Font.color Brand.subtleTextColor
+                , Font.size <| Brand.scaled 1
                 ]
-                { url = Route.toString Route.Login
-                , label = text "Come on in"
-                }
+                [ text "A rizzmi member? "
+                , link
+                    [ Font.color Brand.primaryColor
+                    , Font.semiBold
+                    ]
+                    { url = Route.toString Route.Login
+                    , label = text "Come on in"
+                    }
+                ]
+
+            -- Name
+            , viewName form.firstName form.lastName
+
+            -- Email
+            , viewEmail form.email
+
+            -- Phone Number
+            , viewPhoneNumber form.phoneNumber
+
+            -- Password
+            , viewPassword form.password form.showPassword
+
+            -- Terms & Conditions
+            , viewAgreement form.agree
+
+            -- Login
+            , viewSignupBtn form
             ]
-
-        -- Name
-        , viewName form.firstName form.lastName
-
-        -- Email
-        , viewEmail form.email
-
-        -- Phone Number
-        , viewPhoneNumber form.phoneNumber
-
-        -- Password
-        , viewPassword form.password form.showPassword
-
-        -- Terms & Conditions
-        , viewAgreement form.agree
-
-        -- Login
-        , viewSignupBtn form
-        ]
 
 
 viewName : String -> String -> Element Msg

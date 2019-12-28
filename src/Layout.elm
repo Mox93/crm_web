@@ -106,29 +106,14 @@ scrollBar loc scroll =
         }
 
 
-vCard : List (Element msg) -> Element msg
-vCard contents =
-    column
+card : Element msg -> Element msg
+card contents =
+    el
         [ Background.color Brand.cardColor
         , Brand.defaultPadding
         , Border.rounded <| Brand.scaled 1
         , centerY
         , centerX
-        , spacing <| Brand.scaled 1
-        , Brand.shadow
-        ]
-        contents
-
-
-hCard : List (Element msg) -> Element msg
-hCard contents =
-    row
-        [ Background.color Brand.cardColor
-        , Brand.defaultPadding
-        , Border.rounded <| Brand.scaled 1
-        , centerY
-        , centerX
-        , spacing <| Brand.scaled 1
         , Brand.shadow
         ]
         contents

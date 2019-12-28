@@ -93,35 +93,38 @@ view model =
 
 viewForm : Form -> Element Msg
 viewForm form =
-    Layout.vCard
-        [ Layout.viewHeader "Login"
-        , row
-            [ centerX
-            , Font.color Brand.subtleTextColor
-            , Font.size <| Brand.scaled 1
+    Layout.card <|
+        column
+            [ spacing <| Brand.scaled 1
             ]
-            [ text "New to rizzmi? "
-            , link
-                [ Font.color Brand.primaryColor
-                , Font.semiBold
+            [ Layout.viewHeader "Login"
+            , row
+                [ centerX
+                , Font.color Brand.subtleTextColor
+                , Font.size <| Brand.scaled 1
                 ]
-                { url = Route.toString Route.Signup
-                , label = text "Join us now"
-                }
+                [ text "New to rizzmi? "
+                , link
+                    [ Font.color Brand.primaryColor
+                    , Font.semiBold
+                    ]
+                    { url = Route.toString Route.Signup
+                    , label = text "Join us now"
+                    }
+                ]
+
+            -- Email
+            , viewEmail form.email
+
+            -- Password
+            , viewPassword form.password form.showPassword
+
+            -- Remember Me
+            , viewRememberMe form.rememberMe
+
+            -- Login
+            , viewLoginBtn form
             ]
-
-        -- Email
-        , viewEmail form.email
-
-        -- Password
-        , viewPassword form.password form.showPassword
-
-        -- Remember Me
-        , viewRememberMe form.rememberMe
-
-        -- Login
-        , viewLoginBtn form
-        ]
 
 
 viewEmail : String -> Element Msg

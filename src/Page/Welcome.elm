@@ -155,14 +155,17 @@ view model =
 
 viewWelcomeCard : Element Msg
 viewWelcomeCard =
-    Layout.vCard
-        [ Layout.viewHeader "Welcome!"
-        , row
-            [ spacing <| Brand.scaled 1 ]
-            [ viewCreateBtn
-            , viewJoinBtn
+    Layout.card <|
+        column
+            [ spacing <| Brand.scaled 1
             ]
-        ]
+            [ Layout.viewHeader "Welcome!"
+            , row
+                [ spacing <| Brand.scaled 1 ]
+                [ viewCreateBtn
+                , viewJoinBtn
+                ]
+            ]
 
 
 viewCreateBtn : Element Msg
@@ -209,32 +212,38 @@ viewJoinBtn =
 
 viewCreateForm : CreationForm -> Element Msg
 viewCreateForm form =
-    Layout.vCard
-        [ row
-            [ width fill ]
-            [ el [ alignLeft ] viewBackBtn
-            , el [ centerX ] <| Layout.viewHeader "Create Company"
-            , el [ width (px 24), height (px 24) ] Element.none
+    Layout.card <|
+        column
+            [ spacing <| Brand.scaled 1
             ]
-        , viewName form.name
-        , viewEmail form.email
-        , viewPhoneNumber form.phoneNumber
-        , submitBan <| text "Create"
-        ]
+            [ row
+                [ width fill ]
+                [ el [ alignLeft ] viewBackBtn
+                , el [ centerX ] <| Layout.viewHeader "Create Company"
+                , el [ width (px 24), height (px 24) ] Element.none
+                ]
+            , viewName form.name
+            , viewEmail form.email
+            , viewPhoneNumber form.phoneNumber
+            , submitBan <| text "Create"
+            ]
 
 
 viewJoinForm : JoinForm -> Element Msg
 viewJoinForm form =
-    Layout.vCard
-        [ row
-            [ width fill ]
-            [ el [ alignLeft ] viewBackBtn
-            , el [ centerX ] <| Layout.viewHeader "Join Company"
-            , el [ width (px 24), height (px 24) ] Element.none
+    Layout.card <|
+        column
+            [ spacing <| Brand.scaled 1
             ]
-        , viewName form.name
-        , submitBan <| text "Join"
-        ]
+            [ row
+                [ width fill ]
+                [ el [ alignLeft ] viewBackBtn
+                , el [ centerX ] <| Layout.viewHeader "Join Company"
+                , el [ width (px 24), height (px 24) ] Element.none
+                ]
+            , viewName form.name
+            , submitBan <| text "Join"
+            ]
 
 
 viewBackBtn : Element Msg
