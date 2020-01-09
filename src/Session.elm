@@ -1,8 +1,8 @@
-module Session exposing (Session, fromViewer, meta, navKey, updateMeta, viewer)
+module Session exposing (Session, changes, cred, fromViewer, meta, navKey, updateMeta, viewer)
 
+import Api exposing (Cred)
 import Browser.Navigation as Nav
 import Meta exposing (Meta)
-import Time
 import Viewer exposing (Viewer)
 
 
@@ -39,17 +39,14 @@ viewer session =
             Nothing
 
 
+cred : Session -> Maybe Cred
+cred session =
+    case session of
+        LoggedIn _ _ val ->
+            Just (Viewer.cred val)
 
-{-
-   cred : Session -> Maybe Cred
-   cred session =
-       case session of
-           LoggedIn _ val ->
-               Just (Viewer.cred val)
-
-           Guest _ ->
-               Nothing
--}
+        Guest _ _ ->
+            Nothing
 
 
 navKey : Session -> Nav.Key
@@ -64,11 +61,11 @@ navKey session =
 
 
 -- CHANGES
-{-
-   changes : (Session -> msg) -> Nav.Key -> Sub msg
-   changes toMsg key =
-       Api.viewerChanges (\maybeViewer -> toMsg (fromViewer key maybeViewer)) Viewer.decoder
--}
+
+
+changes : (Session -> msg) -> Nav.Key -> Sub msg
+changes toMsg key =
+    Api.viewerChanges (\maybeViewer -> toMsg (fromViewer key maybeViewer)) Viewer.decoder
 
 
 updateMeta : Session -> Meta -> Session

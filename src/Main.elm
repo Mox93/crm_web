@@ -1,9 +1,10 @@
 module Main exposing (..)
 
+import Api exposing (Cred)
 import Browser
 import Browser.Navigation as Nav
 import Html as H
-import Json.Decode as Decode
+import Json.Decode as Decode exposing (Value)
 import Page.Home as Home
 import Page.Login as Login
 import Page.NotFound as NotFound
@@ -12,15 +13,16 @@ import Page.Welcome as Welcome
 import Route exposing (Route)
 import Session exposing (Session)
 import Url exposing (Url)
+import Viewer exposing (Viewer)
 
 
 
 -- MAIN
 
 
-main : Program Decode.Value Model Msg
+main : Program Value Model Msg
 main =
-    Browser.application
+    Api.application Viewer.decoder
         { init = init
         , view = view
         , update = update
@@ -36,16 +38,14 @@ type Model
     | Login Login.Model
     | Signup Signup.Model
     | Welcome Welcome.Model
-    | NotFound Session
+    | NotFound NotFound.Model
     | NotImplemented Session
 
 
-init : Decode.Value -> Url -> Nav.Key -> ( Model, Cmd Msg )
-init flags url key =
-    -- Maybe Viewer
-    Session.fromViewer key Nothing
-        |> Redirect
-        |> changeRouteTo (Route.fromUrl url)
+init : Maybe Viewer -> Url -> Nav.Key -> ( Model, Cmd Msg )
+init maybeViewer url navKey =
+    changeRouteTo (Route.fromUrl url)
+        (Redirect (Session.fromViewer navKey maybeViewer))
 
 
 
@@ -59,6 +59,7 @@ type Msg
     | GotLoginMsg Login.Msg
     | GotSignupMsg Signup.Msg
     | GotWelcomeMsg Welcome.Msg
+    | GotNotFoundMsg NotFound.Msg
     | GotSession Session
     | DoNothing
 
@@ -81,8 +82,8 @@ toSession page =
         Welcome welcome ->
             Welcome.toSession welcome
 
-        NotFound session ->
-            session
+        NotFound notFound ->
+            NotFound.toSession notFound
 
         NotImplemented session ->
             session
@@ -96,38 +97,30 @@ changeRouteTo maybeRoute model =
     in
     case maybeRoute of
         Nothing ->
-            ( NotFound session, Cmd.none )
+            NotFound.init session
+                |> updateWith NotFound GotNotFoundMsg
+
+        Just Route.Root ->
+            ( model, Route.replaceUrl (Session.navKey session) Route.Home )
 
         Just Route.Home ->
-            let
-                ( home, _ ) =
-                    Home.init session
-            in
-            ( Home home, Cmd.none )
+            Home.init session
+                |> updateWith Home GotHomeMsg
 
         Just Route.Login ->
-            let
-                ( login, _ ) =
-                    Login.init session
-            in
-            ( Login login, Cmd.none )
+            Login.init session
+                |> updateWith Login GotLoginMsg
 
         Just Route.Signup ->
-            let
-                ( signup, _ ) =
-                    Signup.init session
-            in
-            ( Signup signup, Cmd.none )
+            Signup.init session
+                |> updateWith Signup GotSignupMsg
 
         Just Route.Logout ->
-            ( NotImplemented session, Cmd.none )
+            ( model, Api.logout )
 
         Just Route.Welcome ->
-            let
-                ( welcome, _ ) =
-                    Welcome.init (Welcome.Welcome session)
-            in
-            ( Welcome welcome, Cmd.none )
+            Welcome.init session
+                |> updateWith Welcome GotWelcomeMsg
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -160,6 +153,10 @@ update msg model =
             Welcome.update subMsg welcome
                 |> updateWith Welcome GotWelcomeMsg
 
+        ( GotNotFoundMsg subMsg, NotFound notFound ) ->
+            NotFound.update subMsg notFound
+                |> updateWith NotFound GotNotFoundMsg
+
         ( GotSession session, Redirect _ ) ->
             ( Redirect session
             , Route.replaceUrl (Session.navKey session) Route.Home
@@ -182,8 +179,28 @@ updateWith toModel toMsg ( subModel, subCmd ) =
 
 
 subscriptions : Model -> Sub Msg
-subscriptions _ =
-    Sub.none
+subscriptions model =
+    case model of
+        Redirect _ ->
+            Session.changes GotSession (Session.navKey (toSession model))
+
+        NotFound notFound ->
+            Sub.map GotNotFoundMsg (NotFound.subscriptions notFound)
+
+        Home home ->
+            Sub.map GotHomeMsg (Home.subscriptions home)
+
+        Login login ->
+            Sub.map GotLoginMsg (Login.subscriptions login)
+
+        Signup signup ->
+            Sub.map GotSignupMsg (Signup.subscriptions signup)
+
+        Welcome welcome ->
+            Sub.map GotWelcomeMsg (Welcome.subscriptions welcome)
+
+        NotImplemented _ ->
+            Sub.none
 
 
 
@@ -233,10 +250,10 @@ view model =
                 List.map (H.map (\msg -> GotWelcomeMsg msg)) body
             }
 
-        NotFound session ->
+        NotFound notFound ->
             let
                 { title, body } =
-                    NotFound.view <| NotFound.init session
+                    NotFound.view notFound
             in
             { title = title ++ " - rizzmi"
             , body =

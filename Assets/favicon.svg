@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="16"
+   height="16"
+   viewBox="0 0 4.2333332 4.2333335"
+   version="1.1"
+   id="svg1075"
+   inkscape:version="0.92.3 (2405546, 2018-03-11)"
+   sodipodi:docname="favicon.svg">
+  <defs
+     id="defs1069" />
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="22.4"
+     inkscape:cx="0.43809737"
+     inkscape:cy="8.6235649"
+     inkscape:document-units="mm"
+     inkscape:current-layer="layer1"
+     showgrid="false"
+     units="px"
+     inkscape:window-width="1366"
+     inkscape:window-height="729"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1" />
+  <metadata
+     id="metadata1072">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title />
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(0,-292.76665)">
+    <rect
+       style="opacity:1;fill:#50a141;fill-opacity:1;stroke:none;stroke-width:26.45833397;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;paint-order:fill markers stroke"
+       id="rect1130"
+       width="4.2333326"
+       height="4.2333326"
+       x="0"
+       y="292.76666"
+       ry="1.0364176"
+       inkscape:export-xdpi="96.000015"
+       inkscape:export-ydpi="96.000015"
+       inkscape:export-filename="/home/mohamed/favicon.png" />
+    <path
+       sodipodi:nodetypes="ccccssccssc"
+       inkscape:connector-curvature="0"
+       id="path1113-6"
+       d="m 1.3338968,294.78898 h -0.00111 v 1.48603 h 1.0625957 l 2.646e-4,-1.37813 c 0,-0.17376 0.1043992,-0.34335 0.3271465,-0.34335 0.079288,0 0.1106459,0.002 0.1777524,0.0155 v -1.06345 c -0.1778479,-0.0161 -0.1879124,-0.0138 -0.3814073,-0.0138 -0.3818678,0 -0.6773095,0.16049 -0.9007051,0.41742 -0.223393,0.25694 -0.2911792,0.56397 -0.2844614,0.87979 z"
+       style="opacity:1;fill:#f9f9f9;fill-opacity:1;stroke:none;stroke-width:2.64583325;stroke-linecap:square;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       inkscape:export-xdpi="96.000015"
+       inkscape:export-ydpi="96.000015"
+       inkscape:export-filename="/home/mohamed/favicon.png" />
+  </g>
+</svg>

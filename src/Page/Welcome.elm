@@ -1,4 +1,4 @@
-module Page.Welcome exposing (..)
+module Page.Welcome exposing (Model, Msg, init, subscriptions, toSession, update, view)
 
 import Brand
 import Browser
@@ -10,32 +10,34 @@ import Element.Input as Input
 import Layout
 import Route
 import Session exposing (Session)
+import User
+import Viewer
 
 
 
 -- MODEL
 
 
-type alias CreationForm =
+type alias NewCompanyForm =
     { name : String
     , email : String
     , phoneNumber : String
     }
 
 
-type alias JoinForm =
+type alias JoinCompanyForm =
     { name : String }
 
 
 type Model
     = Welcome Session
-    | CreateCompany Session CreationForm
-    | JoinCompany Session JoinForm
+    | CreateCompany Session NewCompanyForm
+    | JoinCompany Session JoinCompanyForm
 
 
-init : Model -> ( Model, Cmd msg )
-init model =
-    ( model, Cmd.none )
+init : Session -> ( Model, Cmd msg )
+init session =
+    ( Welcome session, Cmd.none )
 
 
 
@@ -52,6 +54,7 @@ type Msg
     | ChangeEmail String
     | ChangePhoneNumber String
     | SearchForCompany String
+    | GotSession Session
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -64,14 +67,14 @@ update msg model =
         ShowCreateForm ->
             let
                 form =
-                    CreationForm "" "" ""
+                    NewCompanyForm "" "" ""
             in
             ( CreateCompany session form, Cmd.none )
 
         ShowJoinForm ->
             let
                 form =
-                    JoinForm ""
+                    JoinCompanyForm ""
             in
             ( JoinCompany session form, Cmd.none )
 
@@ -124,6 +127,18 @@ update msg model =
         ShowWelcome ->
             ( Welcome session, Cmd.none )
 
+        GotSession session_ ->
+            ( Welcome session_, Cmd.none )
+
+
+
+-- SUBSCRIPTION
+
+
+subscriptions : Model -> Sub Msg
+subscriptions model =
+    Session.changes GotSession (Session.navKey <| toSession model)
+
 
 
 -- VIEW
@@ -142,7 +157,7 @@ view model =
           <|
             case model of
                 Welcome session ->
-                    viewWelcomeCard
+                    viewWelcomeCard session
 
                 CreateCompany session form ->
                     viewCreateForm form
@@ -153,13 +168,21 @@ view model =
     }
 
 
-viewWelcomeCard : Element Msg
-viewWelcomeCard =
+viewWelcomeCard : Session -> Element Msg
+viewWelcomeCard session =
     Layout.card <|
         column
             [ spacing <| Brand.scaled 1
             ]
-            [ Layout.viewHeader "Welcome!"
+            [ Layout.viewHeader <|
+                case Session.viewer session of
+                    Just viewer ->
+                        "Welcome "
+                            ++ (User.fullName <| Viewer.info viewer)
+                            ++ "!"
+
+                    Nothing ->
+                        "Welcome!"
             , row
                 [ spacing <| Brand.scaled 1 ]
                 [ viewCreateBtn
@@ -210,7 +233,7 @@ viewJoinBtn =
         }
 
 
-viewCreateForm : CreationForm -> Element Msg
+viewCreateForm : NewCompanyForm -> Element Msg
 viewCreateForm form =
     Layout.card <|
         column
@@ -229,7 +252,7 @@ viewCreateForm form =
             ]
 
 
-viewJoinForm : JoinForm -> Element Msg
+viewJoinForm : JoinCompanyForm -> Element Msg
 viewJoinForm form =
     Layout.card <|
         column
@@ -253,7 +276,7 @@ viewBackBtn =
         { onPress = Just ShowWelcome
         , label =
             image []
-                { src = "/assets/arrow_back_ios-24px.svg"
+                { src = "web/static/assets/arrow_back_ios-24px.svg"
                 , description = "Back"
                 }
         }
@@ -280,6 +303,7 @@ viewName name =
             , label = Input.labelHidden "Company Name"
             }
         ]
+        True
 
 
 viewSearch : String -> Element Msg
@@ -303,6 +327,7 @@ viewSearch name =
             , label = Input.labelHidden "Company Name"
             }
         ]
+        True
 
 
 viewEmail : String -> Element Msg
@@ -326,6 +351,7 @@ viewEmail email =
             , label = Input.labelHidden "Company Email"
             }
         ]
+        True
 
 
 submitBan : Element Msg -> Element Msg
@@ -368,6 +394,7 @@ viewPhoneNumber phone =
             , label = Input.labelHidden "Company Phone Number"
             }
         ]
+        True
 
 
 

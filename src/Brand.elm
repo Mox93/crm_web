@@ -43,6 +43,10 @@ secondaryColorMuted =
     rgb255 125 124 122
 
 
+warningColor =
+    rgb255 212 15 74
+
+
 toElmColor =
     Element.toRgb >> Color.fromRgba
 
@@ -66,8 +70,8 @@ subtleTextColor =
 defaultFont =
     Font.family
         [ Font.external
-            { name = "Noto Sans JP"
-            , url = "https://fonts.googleapis.com/css?family=Noto+Sans+JP&display=swap"
+            { name = "Ubuntu"
+            , url = "https://fonts.googleapis.com/css?family=Ubuntu&display=swap"
             }
         , Font.sansSerif
         ]
@@ -119,7 +123,7 @@ shadow =
         }
 
 
-bottomBorder i =
+underlined i =
     Border.widthEach
         { top = 0
         , right = 0
@@ -128,57 +132,10 @@ bottomBorder i =
         }
 
 
-leftBorder i =
+leftMark i =
     Border.widthEach
         { top = 0
         , right = 0
         , bottom = 0
         , left = i
         }
-
-
-radio : Bool -> Element msg
-radio checked =
-    el
-        [ Border.color secondaryColorMuted
-        , Border.width 2
-        , width (px 20)
-        , height (px 20)
-        , Border.rounded 10
-        , padding 3
-        , mouseDown [ Background.color primaryColorMuted ]
-        ]
-    <|
-        if checked then
-            el
-                [ Background.color secondaryColorMuted
-                , width fill
-                , height fill
-                , Border.rounded 5
-                ]
-                Element.none
-
-        else
-            Element.none
-
-
-eye : Bool -> Element msg
-eye checked =
-    el
-        [ width (px 30)
-        , height (px 30)
-        , Border.rounded 15
-        , mouseDown [ Background.color primaryColorMuted ]
-        ]
-    <|
-        if checked then
-            image [ centerX, centerY ]
-                { src = "assets/visibility-24px.svg"
-                , description = "vOn"
-                }
-
-        else
-            image [ centerX, centerY ]
-                { src = "assets/visibility_off-24px.svg"
-                , description = "vOff"
-                }

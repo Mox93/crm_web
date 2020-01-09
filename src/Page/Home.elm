@@ -1,4 +1,4 @@
-module Page.Home exposing (Model, Msg, init, toSession, update, view)
+module Page.Home exposing (Model, Msg, init, subscriptions, toSession, update, view)
 
 import Brand
 import Browser
@@ -10,6 +10,8 @@ import Meta exposing (Language(..), Meta, Theme)
 import Route exposing (Route)
 import Session exposing (Session, meta)
 import Tabs exposing (Tabs)
+import User
+import Viewer
 
 
 
@@ -46,6 +48,7 @@ type Msg
     = ChangeFocus Section
     | ChangeLanguage Language
     | ChangeTheme Theme
+    | GotSession Session
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -78,6 +81,18 @@ update msg model =
             in
             init session
 
+        GotSession session ->
+            ( { model | session = session }, Cmd.none )
+
+
+
+-- SUBSCRIPTION
+
+
+subscriptions : Model -> Sub Msg
+subscriptions model =
+    Session.changes GotSession (Session.navKey model.session)
+
 
 
 -- VIEW
@@ -87,14 +102,14 @@ view : Model -> Browser.Document Msg
 view model =
     { title = sectionName model.tabs.current
     , body =
-        List.map viewContent model.tabs.before
-            ++ [ viewContent model.tabs.current ]
-            ++ List.map viewContent model.tabs.after
+        List.map (viewContent model.session) model.tabs.before
+            ++ [ viewContent model.session model.tabs.current ]
+            ++ List.map (viewContent model.session) model.tabs.after
     }
 
 
-viewContent : Section -> H.Html msg
-viewContent section =
+viewContent : Session -> Section -> H.Html msg
+viewContent session section =
     case section of
         Main ->
             viewMain "Welcome to Our Website"
@@ -106,7 +121,7 @@ viewContent section =
             viewPricing "Not so Expensive"
 
         ContactUs ->
-            viewContactUS "000-000-0000"
+            viewContactUS "000-000-0000" session
 
 
 viewMain : String -> H.Html msg
@@ -133,10 +148,10 @@ viewPricing pricing =
         viewDark pricing
 
 
-viewContactUS : String -> H.Html msg
-viewContactUS contactUs =
+viewContactUS : String -> Session -> H.Html msg
+viewContactUS contactUs session =
     layout
-        [ inFront <| Layout.appBar appBarContent
+        [ inFront <| Layout.appBar (appBarContent session)
         , Brand.defaultFont
         ]
     <|
@@ -165,21 +180,36 @@ viewLight title =
         [ el [ centerX ] <| text title ]
 
 
-appBarContent : Element msg
-appBarContent =
+appBarContent : Session -> Element msg
+appBarContent session =
     row
         [ alignRight
         , spacing <| Brand.scaled 2
         ]
-        [ link []
-            { url = Route.toString Route.Signup
-            , label = Layout.signupBtn
-            }
-        , link []
-            { url = Route.toString Route.Login
-            , label = Layout.loginBtn
-            }
-        ]
+    <|
+        case Session.viewer session of
+            Nothing ->
+                [ link []
+                    { url = Route.toString Route.Signup
+                    , label = Layout.signupBtn
+                    }
+                , link []
+                    { url = Route.toString Route.Login
+                    , label = Layout.loginBtn
+                    }
+                ]
+
+            Just viewer ->
+                let
+                    user =
+                        Viewer.info viewer
+                in
+                [ text ("Hello " ++ User.fullName user ++ "!")
+                , link []
+                    { url = Route.toString Route.Logout
+                    , label = Layout.logoutBtn
+                    }
+                ]
 
 
 sectionName : Section -> String

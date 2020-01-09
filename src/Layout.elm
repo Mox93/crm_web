@@ -4,7 +4,6 @@ import Brand
 import Element exposing (..)
 import Element.Background as Background
 import Element.Border as Border
-import Element.Events exposing (..)
 import Element.Font as Font
 import Element.Input as Input
 import Route
@@ -37,10 +36,28 @@ loginBtn =
     secondaryBan <| text "Login"
 
 
+logoutBtn : Element msg
+logoutBtn =
+    warningBtn <| text "Logout"
+
+
 primaryBtn : Element msg -> Element msg
 primaryBtn content =
     el
         [ Background.color Brand.primaryColor
+        , Font.color Brand.primaryTextColorDBg
+        , Font.size <| Brand.scaled 1
+        , Border.rounded 6
+        , paddingXY 12 8
+        , Element.pointer
+        ]
+        content
+
+
+warningBtn : Element msg -> Element msg
+warningBtn content =
+    el
+        [ Background.color Brand.warningColor
         , Font.color Brand.primaryTextColorDBg
         , Font.size <| Brand.scaled 1
         , Border.rounded 6
@@ -64,17 +81,32 @@ secondaryBan content =
         content
 
 
-textInput : List (Element msg) -> Element msg
-textInput fields =
+textInput : List (Element msg) -> Bool -> Element msg
+textInput fields ok =
+    row
+        [ Brand.underlined 2
+        , case ok of
+            True ->
+                Border.color Brand.secondaryColorMuted
+
+            False ->
+                Border.color Brand.warningColor
+        , spacing <| Brand.scaled 1
+        , focused [ Border.color Brand.primaryColor ]
+        , width fill
+        ]
+        fields
+
+
+withErrors : Element msg -> Element msg -> Element msg
+withErrors field errors =
     column
-        [ width (px <| Brand.scaled 15) ]
-        [ row
-            [ Brand.bottomBorder 2
-            , Border.color Brand.secondaryColorMuted
-            , spacing <| Brand.scaled 1
-            , focused [ Border.color Brand.primaryColor ]
-            ]
-            fields
+        [ width fill
+        , spacing <| Brand.scaled -5
+        , alignTop
+        ]
+        [ field
+        , errors
         ]
 
 
@@ -131,6 +163,53 @@ viewHeader header =
         text header
 
 
+radio : Bool -> Element msg
+radio checked =
+    el
+        [ Border.color Brand.secondaryColorMuted
+        , Border.width 2
+        , width (px 20)
+        , height (px 20)
+        , Border.rounded 10
+        , padding 3
+        , mouseDown [ Background.color Brand.primaryColorMuted ]
+        ]
+    <|
+        if checked then
+            el
+                [ Background.color Brand.secondaryColorMuted
+                , width fill
+                , height fill
+                , Border.rounded 5
+                ]
+                Element.none
+
+        else
+            Element.none
+
+
+eye : Bool -> Element msg
+eye checked =
+    el
+        [ width (px 30)
+        , height (px 30)
+        , Border.rounded 15
+        , mouseDown [ Background.color Brand.primaryColorMuted ]
+        ]
+    <|
+        if checked then
+            image [ centerX, centerY ]
+                { src = "/web/static/assets/visibility-24px.svg"
+                , description = "vOn"
+                }
+
+        else
+            image [ centerX, centerY ]
+                { src = "/web/static/assets/visibility_off-24px.svg"
+                , description = "vOff"
+                }
+
+
 appBar : Element msg -> Element msg
 appBar content =
     row
@@ -146,7 +225,7 @@ appBar content =
             , label =
                 image
                     [ height (px <| Brand.scaled 3) ]
-                    { src = "assets/logo.svg"
+                    { src = "/web/static/assets/logo.svg"
                     , description = "rizzmi"
                     }
             }

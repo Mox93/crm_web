@@ -1,4 +1,4 @@
-module Page.NotFound exposing (..)
+module Page.NotFound exposing (Model, Msg, init, subscriptions, toSession, update, view)
 
 import Brand
 import Browser
@@ -15,20 +15,25 @@ type alias Model =
     { session : Session }
 
 
-init : Session -> Model
+init : Session -> ( Model, Cmd msg )
 init session =
-    { session = session }
+    ( Model session, Cmd.none )
 
 
 type Msg
-    = NoOp
+    = GotSession Session
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        NoOp ->
-            ( model, Cmd.none )
+        GotSession session ->
+            ( { model | session = session }, Cmd.none )
+
+
+subscriptions : Model -> Sub Msg
+subscriptions model =
+    Session.changes GotSession (Session.navKey model.session)
 
 
 view : Model -> Browser.Document Msg
@@ -52,3 +57,12 @@ view model =
                 ]
         ]
     }
+
+
+
+-- EXPORT
+
+
+toSession : Model -> Session
+toSession model =
+    model.session

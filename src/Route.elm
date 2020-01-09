@@ -13,6 +13,7 @@ import Url.Parser as Parser exposing ((</>), (<?>), Parser, fragment, int, map, 
 
 type Route
     = Home
+    | Root
     | Login
     | Logout
     | Signup
@@ -62,6 +63,9 @@ routeToPieces : Route -> List String
 routeToPieces page =
     case page of
         Home ->
+            []
+
+        Root ->
             []
 
         Login ->
