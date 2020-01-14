@@ -18,6 +18,7 @@ type Route
     | Logout
     | Signup
     | Welcome
+    | MyProfile
 
 
 parser : Parser (Route -> a) a
@@ -28,6 +29,7 @@ parser =
         , map Logout (s "logout")
         , map Signup (s "signup")
         , map Welcome (s "welcome")
+        , map MyProfile (s "profile")
         ]
 
 
@@ -79,3 +81,6 @@ routeToPieces page =
 
         Welcome ->
             [ "welcome" ]
+
+        MyProfile ->
+            [ "profile" ]

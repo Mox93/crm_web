@@ -95,7 +95,7 @@ update msg model =
                     ( model
                     , Cmd.batch
                         [ Viewer.store viewer
-                        , Route.replaceUrl (Session.navKey model.session) Route.Root
+                        , Route.replaceUrl (Session.navKey model.session) Route.MyProfile
                         ]
                     )
 
@@ -244,19 +244,11 @@ isFieldError field problem =
 -- VIEW
 
 
-view : Model -> Browser.Document Msg
+view : Model -> { title : String, body : Element Msg }
 view model =
     { title = "Login"
     , body =
-        [ layout
-            [ inFront <| Layout.appBar appBarContent
-            , Brand.defaultBodyPadding
-            , Background.color Brand.canvasColor
-            , Brand.defaultFont
-            ]
-          <|
-            viewForm model.form model.problems
-        ]
+        viewForm model.form model.problems
     }
 
 
@@ -267,7 +259,7 @@ viewForm form problems =
             [ spacing <| Brand.scaled 1
             , width (px <| Brand.scaled 15)
             ]
-            [ Layout.viewHeader "Login"
+            [ Layout.headerText "Login"
             , paragraph
                 [ centerX
                 , Font.color Brand.subtleTextColor
@@ -438,19 +430,6 @@ viewLoginBtn =
         { onPress = Just SubmitForm
         , label = el [ centerX, centerY ] (text "Login")
         }
-
-
-appBarContent : Element msg
-appBarContent =
-    row
-        [ alignRight
-        , spacing <| Brand.scaled 2
-        ]
-        [ link []
-            { url = Route.toString Route.Signup
-            , label = Layout.signupBtn
-            }
-        ]
 
 
 

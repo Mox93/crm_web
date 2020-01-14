@@ -5,8 +5,10 @@ import Browser
 import Browser.Navigation as Nav
 import Html as H
 import Json.Decode as Decode exposing (Value)
+import Page
 import Page.Home as Home
 import Page.Login as Login
+import Page.MyProfile as MyProfile
 import Page.NotFound as NotFound
 import Page.Signup as Signup
 import Page.Welcome as Welcome
@@ -38,6 +40,7 @@ type Model
     | Login Login.Model
     | Signup Signup.Model
     | Welcome Welcome.Model
+    | MyProfile MyProfile.Model
     | NotFound NotFound.Model
     | NotImplemented Session
 
@@ -59,6 +62,7 @@ type Msg
     | GotLoginMsg Login.Msg
     | GotSignupMsg Signup.Msg
     | GotWelcomeMsg Welcome.Msg
+    | GotMyProfileMsg MyProfile.Msg
     | GotNotFoundMsg NotFound.Msg
     | GotSession Session
     | DoNothing
@@ -81,6 +85,9 @@ toSession page =
 
         Welcome welcome ->
             Welcome.toSession welcome
+
+        MyProfile profile ->
+            MyProfile.toSession profile
 
         NotFound notFound ->
             NotFound.toSession notFound
@@ -122,6 +129,10 @@ changeRouteTo maybeRoute model =
             Welcome.init session
                 |> updateWith Welcome GotWelcomeMsg
 
+        Just Route.MyProfile ->
+            MyProfile.init session
+                |> updateWith MyProfile GotMyProfileMsg
+
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
@@ -152,6 +163,10 @@ update msg model =
         ( GotWelcomeMsg subMsg, Welcome welcome ) ->
             Welcome.update subMsg welcome
                 |> updateWith Welcome GotWelcomeMsg
+
+        ( GotMyProfileMsg subMsg, MyProfile profile ) ->
+            MyProfile.update subMsg profile
+                |> updateWith MyProfile GotMyProfileMsg
 
         ( GotNotFoundMsg subMsg, NotFound notFound ) ->
             NotFound.update subMsg notFound
@@ -199,6 +214,9 @@ subscriptions model =
         Welcome welcome ->
             Sub.map GotWelcomeMsg (Welcome.subscriptions welcome)
 
+        MyProfile profile ->
+            Sub.map GotMyProfileMsg (MyProfile.subscriptions profile)
+
         NotImplemented _ ->
             Sub.none
 
@@ -209,56 +227,79 @@ subscriptions model =
 
 view : Model -> Browser.Document Msg
 view model =
+    let
+        viewer =
+            Session.viewer <| toSession model
+
+        viewPage toMsg page content =
+            let
+                { title, body } =
+                    Page.view viewer page content
+            in
+            { title = title
+            , body = List.map (H.map toMsg) body
+            }
+    in
     case model of
         Home home ->
-            let
-                { title, body } =
-                    Home.view home
-            in
-            { title = title ++ " - rizzmi"
-            , body =
-                List.map (H.map (\msg -> GotHomeMsg msg)) body
-            }
+            --let
+            --    { title, body } =
+            --        Home.view home
+            --in
+            --{ title = "rizzmi/" ++ title
+            --, body = List.map (H.map (\msg -> GotHomeMsg msg)) body
+            --}
+            viewPage GotHomeMsg Page.Home (Home.view home)
 
         Login login ->
-            let
-                { title, body } =
-                    Login.view login
-            in
-            { title = title ++ " - rizzmi"
-            , body =
-                List.map (H.map (\msg -> GotLoginMsg msg)) body
-            }
+            --let
+            --    { title, body } =
+            --        Login.view login
+            --in
+            --{ title = "rizzmi/" ++ title
+            --, body = List.map (H.map (\msg -> GotLoginMsg msg)) body
+            --}
+            viewPage GotLoginMsg Page.Login (Login.view login)
 
         Signup signup ->
-            let
-                { title, body } =
-                    Signup.view signup
-            in
-            { title = title ++ " - rizzmi"
-            , body =
-                List.map (H.map (\msg -> GotSignupMsg msg)) body
-            }
+            --let
+            --    { title, body } =
+            --        Signup.view signup
+            --in
+            --{ title = "rizzmi/" ++ title
+            --, body = List.map (H.map (\msg -> GotSignupMsg msg)) body
+            --}
+            viewPage GotSignupMsg Page.Signup (Signup.view signup)
 
         Welcome welcome ->
-            let
-                { title, body } =
-                    Welcome.view welcome
-            in
-            { title = title ++ " - rizzmi"
-            , body =
-                List.map (H.map (\msg -> GotWelcomeMsg msg)) body
-            }
+            --let
+            --    { title, body } =
+            --        Welcome.view welcome
+            --in
+            --{ title = "rizzmi/" ++ title
+            --, body = List.map (H.map (\msg -> GotWelcomeMsg msg)) body
+            --}
+            viewPage GotWelcomeMsg Page.Welcome (Welcome.view welcome)
+
+        MyProfile profile ->
+            --let
+            --    { title, body } =
+            --        MyProfile.view profile
+            --in
+            --{ title = "rizzmi/" ++ title
+            --, body = List.map (H.map (\msg -> GotMyProfileMsg msg)) body
+            --}
+            viewPage GotMyProfileMsg Page.MyProfile (MyProfile.view profile)
 
         NotFound notFound ->
-            let
-                { title, body } =
-                    NotFound.view notFound
-            in
-            { title = title ++ " - rizzmi"
-            , body =
-                List.map (H.map (\_ -> DoNothing)) body
-            }
+            --let
+            --    { title, body } =
+            --        NotFound.view notFound
+            --in
+            --{ title = "rizzmi/" ++ title
+            --, body = List.map (H.map (\_ -> DoNothing)) body
+            --}
+            viewPage GotNotFoundMsg Page.NotFound (NotFound.view notFound)
 
         NotImplemented _ ->
             { title = "rizzmi"
@@ -269,7 +310,6 @@ view model =
             }
 
         Redirect _ ->
-            { title = "Loading"
-            , body =
-                [ H.h3 [] [ H.text "Loading..." ] ]
+            { title = "rizzmi/loading"
+            , body = [ H.h3 [] [ H.text "Loading..." ] ]
             }

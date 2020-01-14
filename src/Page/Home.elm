@@ -98,17 +98,20 @@ subscriptions model =
 -- VIEW
 
 
-view : Model -> Browser.Document Msg
+view : Model -> { title : String, body : Element Msg }
 view model =
     { title = sectionName model.tabs.current
     , body =
-        List.map (viewContent model.session) model.tabs.before
-            ++ [ viewContent model.session model.tabs.current ]
-            ++ List.map (viewContent model.session) model.tabs.after
+        column
+            []
+        <|
+            List.map (viewContent model.session) model.tabs.before
+                ++ [ viewContent model.session model.tabs.current ]
+                ++ List.map (viewContent model.session) model.tabs.after
     }
 
 
-viewContent : Session -> Section -> H.Html msg
+viewContent : Session -> Section -> Element msg
 viewContent session section =
     case section of
         Main ->
@@ -121,48 +124,34 @@ viewContent session section =
             viewPricing "Not so Expensive"
 
         ContactUs ->
-            viewContactUS "000-000-0000" session
+            viewContactUS "000-000-0000"
 
 
-viewMain : String -> H.Html msg
+viewMain : String -> Element msg
 viewMain main =
-    layout
-        [ Brand.defaultFont ]
-    <|
-        viewDark main
+    viewDark main
 
 
-viewFeatures : String -> H.Html msg
+viewFeatures : String -> Element msg
 viewFeatures features =
-    layout
-        [ Brand.defaultFont ]
-    <|
-        viewLight features
+    viewLight features
 
 
-viewPricing : String -> H.Html msg
+viewPricing : String -> Element msg
 viewPricing pricing =
-    layout
-        [ Brand.defaultFont ]
-    <|
-        viewDark pricing
+    viewDark pricing
 
 
-viewContactUS : String -> Session -> H.Html msg
-viewContactUS contactUs session =
-    layout
-        [ inFront <| Layout.appBar (appBarContent session)
-        , Brand.defaultFont
-        ]
-    <|
-        viewLight contactUs
+viewContactUS : String -> Element msg
+viewContactUS contactUs =
+    viewLight contactUs
 
 
 viewDark : String -> Element msg
 viewDark title =
     row
         [ Background.color Brand.canvasColor
-        , height fill
+        , height (px 600)
         , width fill
         , Brand.defaultBodyPadding
         ]
@@ -173,43 +162,11 @@ viewLight : String -> Element msg
 viewLight title =
     row
         [ Background.color Brand.cardColor
-        , height fill
+        , height (px 600)
         , width fill
         , Brand.defaultBodyPadding
         ]
         [ el [ centerX ] <| text title ]
-
-
-appBarContent : Session -> Element msg
-appBarContent session =
-    row
-        [ alignRight
-        , spacing <| Brand.scaled 2
-        ]
-    <|
-        case Session.viewer session of
-            Nothing ->
-                [ link []
-                    { url = Route.toString Route.Signup
-                    , label = Layout.signupBtn
-                    }
-                , link []
-                    { url = Route.toString Route.Login
-                    , label = Layout.loginBtn
-                    }
-                ]
-
-            Just viewer ->
-                let
-                    user =
-                        Viewer.info viewer
-                in
-                [ text ("Hello " ++ User.fullName user ++ "!")
-                , link []
-                    { url = Route.toString Route.Logout
-                    , label = Layout.logoutBtn
-                    }
-                ]
 
 
 sectionName : Section -> String

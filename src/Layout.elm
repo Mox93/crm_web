@@ -26,21 +26,6 @@ type AppBarConfig msg
     | Branch (BranchAppBar msg)
 
 
-signupBtn : Element msg
-signupBtn =
-    primaryBtn <| text "Sign up for free"
-
-
-loginBtn : Element msg
-loginBtn =
-    secondaryBan <| text "Login"
-
-
-logoutBtn : Element msg
-logoutBtn =
-    warningBtn <| text "Logout"
-
-
 primaryBtn : Element msg -> Element msg
 primaryBtn content =
     el
@@ -151,8 +136,8 @@ card contents =
         contents
 
 
-viewHeader : String -> Element msg
-viewHeader header =
+headerText : String -> Element msg
+headerText header =
     el
         [ centerX
         , Font.color Brand.primaryTextColorLBg
@@ -208,26 +193,3 @@ eye checked =
                 { src = "/web/static/assets/visibility_off-24px.svg"
                 , description = "vOff"
                 }
-
-
-appBar : Element msg -> Element msg
-appBar content =
-    row
-        [ width fill
-        , height (Element.px Brand.appBarHeight)
-        , Brand.defaultBarPadding
-        , Background.color Brand.secondaryColor
-        , Font.color Brand.primaryTextColorDBg
-        , Brand.shadow
-        ]
-        [ link [ Font.bold ]
-            { url = Route.toString Route.Home
-            , label =
-                image
-                    [ height (px <| Brand.scaled 3) ]
-                    { src = "/web/static/assets/logo.svg"
-                    , description = "rizzmi"
-                    }
-            }
-        , content
-        ]

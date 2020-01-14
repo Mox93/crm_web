@@ -3,6 +3,7 @@ module Session exposing (Session, changes, cred, fromViewer, meta, navKey, updat
 import Api exposing (Cred)
 import Browser.Navigation as Nav
 import Meta exposing (Meta)
+import User exposing (User)
 import Viewer exposing (Viewer)
 
 
@@ -44,6 +45,16 @@ cred session =
     case session of
         LoggedIn _ _ val ->
             Just (Viewer.cred val)
+
+        Guest _ _ ->
+            Nothing
+
+
+user : Session -> Maybe User
+user session =
+    case session of
+        LoggedIn _ _ val ->
+            Just (Viewer.info val)
 
         Guest _ _ ->
             Nothing

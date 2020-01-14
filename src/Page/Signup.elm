@@ -289,19 +289,11 @@ isFieldError field problem =
 -- VIEW
 
 
-view : Model -> Browser.Document Msg
+view : Model -> { title : String, body : Element Msg }
 view model =
     { title = "Sign up"
     , body =
-        [ layout
-            [ inFront <| Layout.appBar appBarContent
-            , Brand.defaultBodyPadding
-            , Background.color Brand.canvasColor
-            , Brand.defaultFont
-            ]
-          <|
-            viewForm model.form model.problems
-        ]
+        viewForm model.form model.problems
     }
 
 
@@ -311,7 +303,7 @@ viewForm form problems =
         column
             [ spacing <| Brand.scaled 1
             ]
-            [ Layout.viewHeader "Sign up"
+            [ Layout.headerText "Sign up"
             , paragraph
                 [ centerX
                 , Font.color Brand.subtleTextColor
@@ -623,58 +615,6 @@ viewSignupBtn =
         { onPress = Just SubmitForm
         , label = el [ centerX, centerY ] (text "Sign up")
         }
-
-
-
-{-
-   viewSignupBtn : Element Msg
-   viewSignupBtn =
-       row
-           [ centerX
-           , spacing <| Brand.scaled 2
-           , width fill
-           ]
-           [ link
-               [ width fill
-               ]
-               { url = Route.toString Route.Welcome
-               , label =
-                   signupBtn <| text "Sign up"
-               }
-           ]
-
-
-   signupBtn : Element Msg -> Element Msg
-   signupBtn content =
-       el
-           [ width fill
-           , height (px <| Brand.scaled 6)
-           , Font.bold
-           , Font.size <| Brand.scaled 3
-           , Font.color Brand.primaryTextColorDBg
-           , Background.color Brand.primaryColor
-           , Border.rounded <| Brand.scaled -3
-           ]
-       <|
-           el
-               [ centerX
-               , centerY
-               ]
-               content
--}
-
-
-appBarContent : Element msg
-appBarContent =
-    row
-        [ alignRight
-        , spacing <| Brand.scaled 2
-        ]
-        [ link []
-            { url = Route.toString Route.Login
-            , label = Layout.loginBtn
-            }
-        ]
 
 
 

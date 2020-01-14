@@ -144,27 +144,19 @@ subscriptions model =
 -- VIEW
 
 
-view : Model -> Browser.Document Msg
+view : Model -> { title : String, body : Element Msg }
 view model =
     { title = "Welcome"
     , body =
-        [ layout
-            [ inFront <| Layout.appBar Element.none
-            , Brand.defaultBodyPadding
-            , Background.color Brand.canvasColor
-            , Brand.defaultFont
-            ]
-          <|
-            case model of
-                Welcome session ->
-                    viewWelcomeCard session
+        case model of
+            Welcome session ->
+                viewWelcomeCard session
 
-                CreateCompany session form ->
-                    viewCreateForm form
+            CreateCompany session form ->
+                viewCreateForm form
 
-                JoinCompany session form ->
-                    viewJoinForm form
-        ]
+            JoinCompany session form ->
+                viewJoinForm form
     }
 
 
@@ -174,7 +166,7 @@ viewWelcomeCard session =
         column
             [ spacing <| Brand.scaled 1
             ]
-            [ Layout.viewHeader <|
+            [ Layout.headerText <|
                 case Session.viewer session of
                     Just viewer ->
                         "Welcome "
@@ -242,7 +234,7 @@ viewCreateForm form =
             [ row
                 [ width fill ]
                 [ el [ alignLeft ] viewBackBtn
-                , el [ centerX ] <| Layout.viewHeader "Create Company"
+                , el [ centerX ] <| Layout.headerText "Create Company"
                 , el [ width (px 24), height (px 24) ] Element.none
                 ]
             , viewName form.name
@@ -261,7 +253,7 @@ viewJoinForm form =
             [ row
                 [ width fill ]
                 [ el [ alignLeft ] viewBackBtn
-                , el [ centerX ] <| Layout.viewHeader "Join Company"
+                , el [ centerX ] <| Layout.headerText "Join Company"
                 , el [ width (px 24), height (px 24) ] Element.none
                 ]
             , viewName form.name

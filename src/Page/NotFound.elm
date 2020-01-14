@@ -4,10 +4,8 @@ import Brand
 import Browser
 import Element exposing (..)
 import Element.Background as Background
-import Element.Border as Border
 import Element.Font as Font
 import Layout
-import Route exposing (Route)
 import Session exposing (Session)
 
 
@@ -36,26 +34,27 @@ subscriptions model =
     Session.changes GotSession (Session.navKey model.session)
 
 
-view : Model -> Browser.Document Msg
+view : Model -> { title : String, body : Element Msg }
 view model =
-    { title = "404 Page Not Found"
+    { title = "Page Not Found"
     , body =
-        [ layout
-            [ inFront <| Layout.appBar Element.none
-            , Brand.defaultFont
+        --[ layout
+        --    [ inFront <| Layout.appBar Element.none
+        --    , Brand.defaultFont
+        --    ]
+        --  <|
+        row
+            [ Background.color Brand.canvasColor
+            , height fill
+            , width fill
+            , Brand.defaultBodyPadding
+            , Font.color Brand.primaryTextColorLBg
+            , Font.bold
             ]
-          <|
-            row
-                [ Background.color Brand.canvasColor
-                , height fill
-                , width fill
-                , Brand.defaultBodyPadding
-                , Font.color Brand.primaryTextColorLBg
-                , Font.bold
-                ]
-                [ el [ centerX ] <| text "404 Page Not Found "
-                ]
-        ]
+            [ el [ centerX ] <| text "404 Page Not Found "
+            ]
+
+    --]
     }
 
 

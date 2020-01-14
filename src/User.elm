@@ -53,8 +53,8 @@ encode user =
         , ( "phoneNumber", Encode.string user.phoneNumber )
         , ( "company"
           , case user.company of
-                Just company ->
-                    Encode.string company
+                Just val ->
+                    Encode.string val
 
                 Nothing ->
                     Encode.null
