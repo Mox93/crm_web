@@ -1,4 +1,4 @@
-module Viewer exposing (Viewer, cred, decoder, info, minPasswordChars, selectionSet, store)
+module Viewer exposing (Viewer, avatar, cred, decoder, info, minPasswordChars, selectionSet, store)
 
 {-| The logged-in user currently viewing this page. It stores enough data to
 be able to render the menu bar (username and avatar), along with Cred so it's
@@ -7,6 +7,7 @@ impossible to have a Viewer if you aren't logged in.
 
 import API.Object
 import Api exposing (Cred)
+import Avatar exposing (Avatar)
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet)
 import Json.Decode as Decode exposing (Decoder)
 import Json.Decode.Pipeline exposing (custom)
@@ -33,6 +34,11 @@ cred (Viewer _ val) =
 info : Viewer -> User
 info (Viewer val _) =
     val
+
+
+avatar : Viewer -> Avatar
+avatar (Viewer val _) =
+    val.avatar
 
 
 {-| Passwords must be at least this many characters long!

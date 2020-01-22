@@ -1,11 +1,13 @@
 module Layout exposing (..)
 
+import Asset
 import Brand
 import Element exposing (..)
 import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
 import Element.Input as Input
+import ErrorHandling exposing (Problem, problemToString)
 import Route
 
 
@@ -70,29 +72,58 @@ textInput : List (Element msg) -> Bool -> Element msg
 textInput fields ok =
     row
         [ Brand.underlined 2
-        , case ok of
-            True ->
-                Border.color Brand.secondaryColorMuted
+        , Border.color <|
+            if ok then
+                Brand.secondaryColorMuted
 
-            False ->
-                Border.color Brand.warningColor
+            else
+                Brand.warningColor
         , spacing <| Brand.scaled 1
         , focused [ Border.color Brand.primaryColor ]
         , width fill
+        , Font.color <|
+            if ok then
+                Brand.primaryTextColorLBg
+
+            else
+                Brand.warningColor
         ]
         fields
 
 
-withErrors : Element msg -> Element msg -> Element msg
-withErrors field errors =
+withErrors : Element msg -> List (Problem validatedField) -> Element msg
+withErrors field problems =
     column
         [ width fill
         , spacing <| Brand.scaled -5
         , alignTop
         ]
-        [ field
-        , errors
+    <|
+        case List.isEmpty problems of
+            True ->
+                [ field ]
+
+            False ->
+                [ field
+                , errNote problems
+                ]
+
+
+errNote : List (Problem validatedField) -> Element msg
+errNote problems =
+    column
+        [ Font.color Brand.warningColor
+        , Font.size <| Brand.scaled -1
+        , width (maximum (Brand.scaled 15) fill)
         ]
+    <|
+        List.map
+            (\err ->
+                paragraph
+                    []
+                    [ text <| "* " ++ problemToString err ]
+            )
+            problems
 
 
 scrollBar : Float -> (Float -> msg) -> Element msg
@@ -123,16 +154,19 @@ scrollBar loc scroll =
         }
 
 
-card : Element msg -> Element msg
-card contents =
+card : List (Attr () msg) -> Element msg -> Element msg
+card attr contents =
     el
-        [ Background.color Brand.cardColor
-        , Brand.defaultPadding
-        , Border.rounded <| Brand.scaled 1
-        , centerY
-        , centerX
-        , Brand.shadow
-        ]
+        (List.append
+            [ Background.color Brand.cardColor
+            , Brand.defaultPadding
+            , Border.rounded <| Brand.scaled 1
+            , centerY
+            , centerX
+            , Brand.shadow
+            ]
+            attr
+        )
         contents
 
 
@@ -148,10 +182,15 @@ headerText header =
         text header
 
 
-radio : Bool -> Element msg
-radio checked =
+radio : Bool -> Bool -> Element msg
+radio ok checked =
     el
-        [ Border.color Brand.secondaryColorMuted
+        [ Border.color <|
+            if ok then
+                Brand.secondaryColorMuted
+
+            else
+                Brand.warningColor
         , Border.width 2
         , width (px 20)
         , height (px 20)
@@ -162,7 +201,12 @@ radio checked =
     <|
         if checked then
             el
-                [ Background.color Brand.secondaryColorMuted
+                [ Background.color <|
+                    if ok then
+                        Brand.secondaryColorMuted
+
+                    else
+                        Brand.warningColor
                 , width fill
                 , height fill
                 , Border.rounded 5
@@ -184,12 +228,20 @@ eye checked =
     <|
         if checked then
             image [ centerX, centerY ]
-                { src = "/web/static/assets/visibility-24px.svg"
+                { src = Asset.src Asset.visible
                 , description = "vOn"
                 }
 
         else
             image [ centerX, centerY ]
-                { src = "/web/static/assets/visibility_off-24px.svg"
+                { src = Asset.src Asset.invisible
                 , description = "vOff"
                 }
+
+
+logoutBtn : Element msg
+logoutBtn =
+    link [ centerY ]
+        { url = Route.toString Route.Logout
+        , label = secondaryBan <| text "Logout"
+        }

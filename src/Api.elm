@@ -42,8 +42,8 @@ import User exposing (User)
 {-| The authentication credentials for the Viewer (that is, the currently logged-in user.)
 This includes:
 
-  - The cred's User
-  - The cred's Token
+  - The cred's Access Token
+  - The cred's Refresh Token
     By design, there is no way to access the token directly as a String.
     It can be encoded for persistence, and it can be added to a header
     to a HttpBuilder for a request, but that's it.
@@ -88,6 +88,7 @@ credDecoder =
 
 api_url : String
 api_url =
+    -- "https://rizzmi-test.herokuapp.com/api"
     "http://127.0.0.1:5000/api"
 
 
@@ -145,16 +146,27 @@ makePrivetMutation (Cred (AccessToken token) _) mutation decodesTo =
         |> Graphql.Http.send decodesTo
 
 
-refreshToken :
+makeQueryWithRefreshToken :
     Cred
     -> SelectionSet decodesTo RootQuery
     -> (Result (Graphql.Http.Error decodesTo) decodesTo -> msg)
     -> Cmd msg
-refreshToken (Cred _ (RefreshToken token)) query decodesTo =
+makeQueryWithRefreshToken (Cred _ (RefreshToken token)) query decodesTo =
     query
         |> Graphql.Http.queryRequest api_url
         |> getAuthHeader token
         |> Graphql.Http.send decodesTo
+
+
+tokenRefresh :
+    Cred
+    -> (RemoteData (Graphql.Http.Error String) String -> msg)
+    -> Cmd msg
+tokenRefresh cred msg =
+    makeQueryWithRefreshToken
+        cred
+        Query.refresh
+        (RemoteData.fromResult >> msg)
 
 
 login :
@@ -182,8 +194,8 @@ login form msg viewerSelectionSet =
     makePublicQuery
         (Query.login optionalFields
             requiredFields
-            (viewerSelectionSet LoginObject.user <|
-                LoginObject.token credSelectionSet
+            (LoginObject.token credSelectionSet
+                |> viewerSelectionSet LoginObject.user
             )
         )
         (RemoteData.fromResult >> msg)
@@ -218,8 +230,8 @@ signup form msg viewerSelectionSet =
     makePublicMutation
         (Mutation.signup
             requiredFields
-            (viewerSelectionSet SignupObject.user <|
-                SignupObject.token credSelectionSet
+            (SignupObject.token credSelectionSet
+                |> viewerSelectionSet SignupObject.user
             )
         )
         (RemoteData.fromResult >> msg)
@@ -263,6 +275,8 @@ storeCredWith (Cred (AccessToken access) (RefreshToken refresh)) user =
                 [ ( "user"
                   , Encode.object
                         [ ( "info", User.encode user )
+
+                        --, ( "avatar", Avatar.encode avatar )
                         , ( "access", Encode.string access )
                         , ( "refresh", Encode.string refresh )
                         ]
@@ -270,6 +284,21 @@ storeCredWith (Cred (AccessToken access) (RefreshToken refresh)) user =
                 ]
     in
     storeCache (Just json)
+
+
+
+--logout :
+--    Cred
+--    -> (RemoteData (Graphql.Http.Error Bool) Bool -> msg)
+--    -> Cmd msg
+--logout cred msg =
+--    Cmd.batch
+--        [ storeCache Nothing
+--        , makePrivetQuery
+--            cred
+--            Query.logout
+--            (RemoteData.fromResult >> msg)
+--        ]
 
 
 logout : Cmd msg

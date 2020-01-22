@@ -3,6 +3,7 @@ module User exposing (User, decoder, encode, fullName, selectionSet)
 import API.Object
 import API.Object.User as UserObject
 import API.Scalar exposing (Id(..))
+import Avatar exposing (Avatar)
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet)
 import Json.Decode as Decode exposing (Decoder)
 import Json.Decode.Pipeline exposing (required)
@@ -20,6 +21,7 @@ type alias User =
     , email : String
     , phoneNumber : String
     , company : Maybe String
+    , avatar : Avatar
     }
 
 
@@ -41,6 +43,7 @@ decoder =
         |> required "email" Decode.string
         |> required "phoneNumber" Decode.string
         |> required "company" (Decode.nullable Decode.string)
+        |> required "avatar" Avatar.decoder
 
 
 encode : User -> Value
@@ -59,18 +62,20 @@ encode user =
                 Nothing ->
                     Encode.null
           )
+        , ( "avatar", Avatar.encode user.avatar )
         ]
 
 
 selectionSet : SelectionSet User API.Object.User
 selectionSet =
-    SelectionSet.map6 User
+    SelectionSet.map7 User
         (SelectionSet.map (\(Id id) -> id) UserObject.id)
         UserObject.firstName
         UserObject.lastName
         UserObject.email
         UserObject.phoneNumber
         (SelectionSet.map maybeIdToMaybeString UserObject.company)
+        (Avatar.selectionSet UserObject.avatar)
 
 
 maybeIdToMaybeString : Maybe Id -> Maybe String

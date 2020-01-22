@@ -87,3 +87,13 @@ company =
 role : SelectionSet decodesTo API.Object.Role -> SelectionSet (Maybe (List (Maybe decodesTo))) API.Interface.UserInterface
 role object_ =
     Object.selectionForCompositeField "role" [] object_ (identity >> Decode.nullable >> Decode.list >> Decode.nullable)
+
+
+avatar : SelectionSet (Maybe String) API.Interface.UserInterface
+avatar =
+    Object.selectionForField "(Maybe String)" "avatar" [] (Decode.string |> Decode.nullable)
+
+
+config : SelectionSet decodesTo API.Object.Config -> SelectionSet (Maybe decodesTo) API.Interface.UserInterface
+config object_ =
+    Object.selectionForCompositeField "config" [] object_ (identity >> Decode.nullable)

@@ -1,4 +1,4 @@
-module Meta exposing (..)
+module Config exposing (..)
 
 import Time
 
@@ -13,20 +13,17 @@ type Language
 
 
 type Theme
-    = Default
+    = Light
     | Dark
-    | Light
-      -- TODO shouldn't take just a string
-    | Custom
 
 
-type alias Meta =
+type alias Config =
     { language : Language
     , theme : Theme
     , timeZone : Time.Zone
     }
 
 
-defaults : Meta
+defaults : Config
 defaults =
-    Meta English Default Time.utc
+    Config English Light Time.utc

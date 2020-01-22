@@ -1,11 +1,10 @@
 module Page.NotFound exposing (Model, Msg, init, subscriptions, toSession, update, view)
 
 import Brand
-import Browser
 import Element exposing (..)
 import Element.Background as Background
 import Element.Font as Font
-import Layout
+import Route
 import Session exposing (Session)
 
 
@@ -26,7 +25,9 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         GotSession session ->
-            ( { model | session = session }, Cmd.none )
+            ( { model | session = session }
+            , Route.replaceUrl (Session.navKey session) Route.Root
+            )
 
 
 subscriptions : Model -> Sub Msg

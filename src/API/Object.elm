@@ -29,6 +29,10 @@ type Company
     = Company
 
 
+type Config
+    = Config
+
+
 type Customer
     = Customer
 

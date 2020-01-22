@@ -1,10 +1,11 @@
 module Main exposing (..)
 
 import Api exposing (Cred)
+import AppBar exposing (Page(..))
 import Browser
 import Browser.Navigation as Nav
 import Html as H
-import Json.Decode as Decode exposing (Value)
+import Json.Decode exposing (Value)
 import Page
 import Page.Home as Home
 import Page.Login as Login
@@ -34,7 +35,15 @@ main =
         }
 
 
-type Model
+
+-- MODEL
+
+
+type Menu
+    = FromAppBar AppBar.Menu
+
+
+type Body
     = Redirect Session
     | Home Home.Model
     | Login Login.Model
@@ -42,13 +51,31 @@ type Model
     | Welcome Welcome.Model
     | MyProfile MyProfile.Model
     | NotFound NotFound.Model
-    | NotImplemented Session
+
+
+type alias Model =
+    { body : Body
+
+    --, appBar : AppBar.State
+    , openMenu : Maybe Menu
+    }
 
 
 init : Maybe Viewer -> Url -> Nav.Key -> ( Model, Cmd Msg )
 init maybeViewer url navKey =
+    let
+        session =
+            Session.fromViewer navKey maybeViewer
+
+        --( appBer, _ ) =
+        --    AppBar.init session
+    in
     changeRouteTo (Route.fromUrl url)
-        (Redirect (Session.fromViewer navKey maybeViewer))
+        { body = Redirect session
+
+        --, appBar = appBer
+        , openMenu = Nothing
+        }
 
 
 
@@ -64,13 +91,14 @@ type Msg
     | GotWelcomeMsg Welcome.Msg
     | GotMyProfileMsg MyProfile.Msg
     | GotNotFoundMsg NotFound.Msg
+    | GotAppBarMsg AppBar.Msg
     | GotSession Session
-    | DoNothing
+    | ToggleMenu (Maybe Menu)
 
 
-toSession : Model -> Session
-toSession page =
-    case page of
+toSession : Body -> Session
+toSession body =
+    case body of
         Redirect session ->
             session
 
@@ -92,55 +120,114 @@ toSession page =
         NotFound notFound ->
             NotFound.toSession notFound
 
-        NotImplemented session ->
-            session
-
 
 changeRouteTo : Maybe Route -> Model -> ( Model, Cmd Msg )
 changeRouteTo maybeRoute model =
     let
         session =
-            toSession model
+            toSession model.body
+
+        maybeViewer =
+            Session.viewer session
     in
-    case maybeRoute of
-        Nothing ->
-            NotFound.init session
-                |> updateWith NotFound GotNotFoundMsg
-
-        Just Route.Root ->
-            ( model, Route.replaceUrl (Session.navKey session) Route.Home )
-
-        Just Route.Home ->
+    case ( maybeRoute, maybeViewer ) of
+        -- For Everyone
+        --      * Root
+        ( Just Route.Root, Nothing ) ->
             Home.init session
-                |> updateWith Home GotHomeMsg
+                |> updateWith model Home GotHomeMsg
 
-        Just Route.Login ->
+        ( Just Route.Root, Just viewer ) ->
+            case (Viewer.info viewer).company of
+                Nothing ->
+                    ( model
+                    , Route.replaceUrl (Session.navKey session) Route.Welcome
+                    )
+
+                Just company ->
+                    -- TODO should render the Dashboard or something
+                    ( model
+                    , Route.replaceUrl (Session.navKey session) Route.MyProfile
+                    )
+
+        --      * Home
+        ( Just Route.Home, _ ) ->
+            Home.init session
+                |> updateWith model Home GotHomeMsg
+
+        --      * 404 Page Not Found
+        ( Nothing, _ ) ->
+            NotFound.init session
+                |> updateWith model NotFound GotNotFoundMsg
+
+        -- Strictly For Guests
+        --      * Login
+        ( Just Route.Login, Nothing ) ->
             Login.init session
-                |> updateWith Login GotLoginMsg
+                |> updateWith model Login GotLoginMsg
 
-        Just Route.Signup ->
+        ( Just Route.Login, Just viewer ) ->
+            ( model
+            , Route.replaceUrl (Session.navKey session) Route.Root
+            )
+
+        --      * Signup
+        ( Just Route.Signup, Nothing ) ->
             Signup.init session
-                |> updateWith Signup GotSignupMsg
+                |> updateWith model Signup GotSignupMsg
 
-        Just Route.Logout ->
-            ( model, Api.logout )
+        ( Just Route.Signup, Just viewer ) ->
+            ( model
+            , Route.replaceUrl (Session.navKey session) Route.Root
+            )
 
-        Just Route.Welcome ->
-            Welcome.init session
-                |> updateWith Welcome GotWelcomeMsg
+        -- Strictly For Users
+        --      * Welcome
+        ( Just Route.Welcome, Nothing ) ->
+            ( model
+            , Route.replaceUrl (Session.navKey session) Route.Root
+            )
 
-        Just Route.MyProfile ->
+        ( Just Route.Welcome, Just viewer ) ->
+            case (Viewer.info viewer).company of
+                Nothing ->
+                    Welcome.init session
+                        |> updateWith model Welcome GotWelcomeMsg
+
+                Just company ->
+                    ( model
+                    , Route.replaceUrl (Session.navKey session) Route.Root
+                    )
+
+        --      * My Profile
+        ( Just Route.MyProfile, Nothing ) ->
+            ( model
+            , Route.replaceUrl (Session.navKey session) Route.Root
+            )
+
+        ( Just Route.MyProfile, Just viewer ) ->
             MyProfile.init session
-                |> updateWith MyProfile GotMyProfileMsg
+                |> updateWith model MyProfile GotMyProfileMsg
+
+        --      * Logout
+        ( Just Route.Logout, Nothing ) ->
+            ( model
+            , Route.replaceUrl (Session.navKey session) Route.Root
+            )
+
+        ( Just Route.Logout, Just viewer ) ->
+            ( model
+            , Api.logout
+            )
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-    case ( msg, model ) of
+    case ( msg, model.body ) of
         ( LinkClicked urlRequest, _ ) ->
             case urlRequest of
                 Browser.Internal url ->
-                    ( model, Nav.pushUrl (Session.navKey (toSession model)) (Url.toString url) )
+                    ( model, Nav.pushUrl (Session.navKey (toSession model.body)) (Url.toString url) )
 
                 Browser.External href ->
                     ( model, Nav.load href )
@@ -150,31 +237,47 @@ update msg model =
 
         ( GotHomeMsg subMsg, Home home ) ->
             Home.update subMsg home
-                |> updateWith Home GotHomeMsg
+                |> updateWith model Home GotHomeMsg
 
         ( GotLoginMsg subMsg, Login login ) ->
             Login.update subMsg login
-                |> updateWith Login GotLoginMsg
+                |> updateWith model Login GotLoginMsg
 
         ( GotSignupMsg subMsg, Signup signup ) ->
             Signup.update subMsg signup
-                |> updateWith Signup GotSignupMsg
+                |> updateWith model Signup GotSignupMsg
 
         ( GotWelcomeMsg subMsg, Welcome welcome ) ->
             Welcome.update subMsg welcome
-                |> updateWith Welcome GotWelcomeMsg
+                |> updateWith model Welcome GotWelcomeMsg
 
         ( GotMyProfileMsg subMsg, MyProfile profile ) ->
             MyProfile.update subMsg profile
-                |> updateWith MyProfile GotMyProfileMsg
+                |> updateWith model MyProfile GotMyProfileMsg
 
         ( GotNotFoundMsg subMsg, NotFound notFound ) ->
             NotFound.update subMsg notFound
-                |> updateWith NotFound GotNotFoundMsg
+                |> updateWith model NotFound GotNotFoundMsg
+
+        ( GotAppBarMsg subMsg, _ ) ->
+            let
+                ( subCmd, maybeMenu ) =
+                    AppBar.update subMsg
+            in
+            ( { model
+                | openMenu = updateOpenMenu model.openMenu maybeMenu
+              }
+            , Cmd.map GotAppBarMsg subCmd
+            )
 
         ( GotSession session, Redirect _ ) ->
-            ( Redirect session
-            , Route.replaceUrl (Session.navKey session) Route.Home
+            ( { model | body = Redirect session }
+            , Route.replaceUrl (Session.navKey session) Route.Root
+            )
+
+        ( ToggleMenu maybeMenu, _ ) ->
+            ( { model | openMenu = maybeMenu }
+            , Cmd.none
             )
 
         ( _, _ ) ->
@@ -182,11 +285,33 @@ update msg model =
             ( model, Cmd.none )
 
 
-updateWith : (subModel -> Model) -> (subMsg -> Msg) -> ( subModel, Cmd subMsg ) -> ( Model, Cmd Msg )
-updateWith toModel toMsg ( subModel, subCmd ) =
-    ( toModel subModel
+updateWith :
+    Model
+    -> (subModel -> Body)
+    -> (subMsg -> Msg)
+    -> ( subModel, Cmd subMsg )
+    -> ( Model, Cmd Msg )
+updateWith model toBody toMsg ( subModel, subCmd ) =
+    ( { model
+        | body = toBody subModel
+        , openMenu = Nothing
+      }
     , Cmd.map toMsg subCmd
     )
+
+
+updateOpenMenu : Maybe Menu -> Maybe AppBar.Menu -> Maybe Menu
+updateOpenMenu maybeMenu maybeSubMenu =
+    case maybeSubMenu of
+        Nothing ->
+            maybeMenu
+
+        Just menu ->
+            if Just (FromAppBar menu) == maybeMenu then
+                Nothing
+
+            else
+                Just (FromAppBar menu)
 
 
 
@@ -195,9 +320,9 @@ updateWith toModel toMsg ( subModel, subCmd ) =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    case model of
-        Redirect _ ->
-            Session.changes GotSession (Session.navKey (toSession model))
+    case model.body of
+        Redirect session ->
+            Session.changes GotSession (Session.navKey session)
 
         NotFound notFound ->
             Sub.map GotNotFoundMsg (NotFound.subscriptions notFound)
@@ -217,9 +342,6 @@ subscriptions model =
         MyProfile profile ->
             Sub.map GotMyProfileMsg (MyProfile.subscriptions profile)
 
-        NotImplemented _ ->
-            Sub.none
-
 
 
 -- VIEW
@@ -228,88 +350,40 @@ subscriptions model =
 view : Model -> Browser.Document Msg
 view model =
     let
-        viewer =
-            Session.viewer <| toSession model
+        session =
+            toSession model.body
+
+        appBarMenu =
+            case model.openMenu of
+                Nothing ->
+                    Nothing
+
+                Just (FromAppBar menu) ->
+                    Just menu
 
         viewPage toMsg page content =
-            let
-                { title, body } =
-                    Page.view viewer page content
-            in
-            { title = title
-            , body = List.map (H.map toMsg) body
-            }
+            Page.view session appBarMenu page content GotAppBarMsg toMsg
     in
-    case model of
+    case model.body of
         Home home ->
-            --let
-            --    { title, body } =
-            --        Home.view home
-            --in
-            --{ title = "rizzmi/" ++ title
-            --, body = List.map (H.map (\msg -> GotHomeMsg msg)) body
-            --}
-            viewPage GotHomeMsg Page.Home (Home.view home)
+            viewPage GotHomeMsg AppBar.Home (Home.view home)
 
         Login login ->
-            --let
-            --    { title, body } =
-            --        Login.view login
-            --in
-            --{ title = "rizzmi/" ++ title
-            --, body = List.map (H.map (\msg -> GotLoginMsg msg)) body
-            --}
-            viewPage GotLoginMsg Page.Login (Login.view login)
+            viewPage GotLoginMsg AppBar.Login (Login.view login)
 
         Signup signup ->
-            --let
-            --    { title, body } =
-            --        Signup.view signup
-            --in
-            --{ title = "rizzmi/" ++ title
-            --, body = List.map (H.map (\msg -> GotSignupMsg msg)) body
-            --}
-            viewPage GotSignupMsg Page.Signup (Signup.view signup)
+            viewPage GotSignupMsg AppBar.Signup (Signup.view signup)
 
         Welcome welcome ->
-            --let
-            --    { title, body } =
-            --        Welcome.view welcome
-            --in
-            --{ title = "rizzmi/" ++ title
-            --, body = List.map (H.map (\msg -> GotWelcomeMsg msg)) body
-            --}
-            viewPage GotWelcomeMsg Page.Welcome (Welcome.view welcome)
+            viewPage GotWelcomeMsg AppBar.Welcome (Welcome.view welcome)
 
         MyProfile profile ->
-            --let
-            --    { title, body } =
-            --        MyProfile.view profile
-            --in
-            --{ title = "rizzmi/" ++ title
-            --, body = List.map (H.map (\msg -> GotMyProfileMsg msg)) body
-            --}
-            viewPage GotMyProfileMsg Page.MyProfile (MyProfile.view profile)
+            viewPage GotMyProfileMsg AppBar.MyProfile (MyProfile.view profile)
 
         NotFound notFound ->
-            --let
-            --    { title, body } =
-            --        NotFound.view notFound
-            --in
-            --{ title = "rizzmi/" ++ title
-            --, body = List.map (H.map (\_ -> DoNothing)) body
-            --}
-            viewPage GotNotFoundMsg Page.NotFound (NotFound.view notFound)
-
-        NotImplemented _ ->
-            { title = "rizzmi"
-            , body =
-                [ H.h1 [] [ H.text "Page Not Implemented" ]
-                , H.p [] [ H.text "Go back ", H.a [ Route.href Route.Home ] [ H.text "Home" ] ]
-                ]
-            }
+            viewPage GotNotFoundMsg AppBar.Other (NotFound.view notFound)
 
         Redirect _ ->
-            { title = "rizzmi/loading"
+            { title = "rizzmi/Loading"
             , body = [ H.h3 [] [ H.text "Loading..." ] ]
             }

@@ -1,17 +1,14 @@
 module Page.MyProfile exposing (Model, Msg, init, subscriptions, toSession, update, view)
 
+import Asset exposing (Image)
+import Avatar exposing (Avatar)
 import Brand
-import Browser
 import Element exposing (..)
-import Element.Background as Background
 import Element.Font as Font
 import Element.Input as Input
-import Html as H
 import Layout
-import Meta exposing (Language(..), Meta, Theme)
-import Route exposing (Route)
-import Session exposing (Session, meta)
-import Tabs exposing (Tabs)
+import Route
+import Session exposing (Session)
 import User exposing (User)
 import Viewer
 
@@ -63,12 +60,12 @@ update msg model =
             case model of
                 ViewMode _ ->
                     ( ViewMode session
-                    , Cmd.none
+                    , Route.replaceUrl (Session.navKey session) Route.MyProfile
                     )
 
                 EditMode _ form ->
                     ( EditMode session form
-                    , Cmd.none
+                    , Route.replaceUrl (Session.navKey session) Route.MyProfile
                     )
 
 
@@ -87,7 +84,7 @@ subscriptions model =
 
 view : Model -> { title : String, body : Element Msg }
 view model =
-    { title = "profile"
+    { title = "My Profile"
     , body =
         case Session.viewer (toSession model) of
             Nothing ->
@@ -97,7 +94,11 @@ view model =
                 column
                     [ paddingXY 0 (Brand.scaled 5)
                     , centerX
-                    , width shrink
+                    , width
+                        (fill
+                            |> maximum (Brand.scaled 19)
+                            |> minimum (Brand.scaled 17)
+                        )
                     , spacing Brand.defaultPaddingAmount
                     ]
                     [ case model of
@@ -106,22 +107,28 @@ view model =
 
                         EditMode _ _ ->
                             viewEditForm <| Viewer.info viewer
+                    , Layout.card
+                        [ width fill
+                        , height (px 200)
+                        ]
+                        Element.none
                     ]
     }
 
 
 viewUserInfo : User -> Element Msg
 viewUserInfo user =
-    Layout.card <|
+    Layout.card
+        [ width fill ]
+    <|
         row
-            [ width (px <| Brand.scaled 19)
-            , height shrink
-            , Brand.defaultPadding
+            [ Brand.defaultPadding
             , spacing Brand.defaultPaddingAmount
             , Font.color Brand.primaryTextColorLBg
             , alignTop
+            , width fill
             ]
-            [ viewAvatar
+            [ viewAvatar user.avatar
             , column
                 [ spacing Brand.defaultPaddingAmount ]
                 [ viewName <| User.fullName user
@@ -133,16 +140,17 @@ viewUserInfo user =
 
 viewEditForm : User -> Element Msg
 viewEditForm user =
-    Layout.card <|
+    Layout.card
+        [ width fill ]
+    <|
         row
-            [ width (px <| Brand.scaled 19)
-            , height shrink
-            , Brand.defaultPadding
+            [ Brand.defaultPadding
             , spacing Brand.defaultPaddingAmount
             , Font.color Brand.primaryTextColorLBg
             , alignTop
+            , width fill
             ]
-            [ viewAvatar
+            [ viewAvatar user.avatar
             , column
                 [ spacing Brand.defaultPaddingAmount ]
                 [ viewName <| User.fullName user
@@ -152,16 +160,11 @@ viewEditForm user =
             ]
 
 
-viewAvatar : Element msg
-viewAvatar =
-    image
-        [ width (px <| Brand.scaled 11)
-        , height (px <| Brand.scaled 11)
-        , alignTop
-        ]
-        { src = "/web/static/assets/avatar.svg"
-        , description = "Avatar"
-        }
+viewAvatar : Avatar -> Element msg
+viewAvatar avatar =
+    el [ alignTop ] <|
+        Avatar.view avatar <|
+            Brand.scaled 10
 
 
 viewName : String -> Element msg
@@ -181,28 +184,28 @@ viewDetails user =
         , Font.size <| Brand.scaled 0
         ]
         [ viewInfo
-            "email-24px.svg"
+            Asset.email
             "email"
             user.email
         , viewInfo
-            "call-24px.svg"
+            Asset.phone
             "phone number"
             user.phoneNumber
         , viewInfo
-            "business-24px.svg"
+            Asset.company
             "company"
           <|
             Maybe.withDefault "N/A" user.company
         ]
 
 
-viewInfo : String -> String -> String -> Element msg
-viewInfo src description val =
+viewInfo : Image -> String -> String -> Element msg
+viewInfo img description val =
     row
         [ spacing <| Brand.scaled 0 ]
         [ image
             [ centerY ]
-            { src = "/web/static/assets/" ++ src
+            { src = Asset.src img
             , description = description
             }
         , el
@@ -221,7 +224,7 @@ editBtn =
         , label =
             image
                 []
-                { src = "/web/static/assets/edit-24px.svg"
+                { src = Asset.src Asset.edit
                 , description = "edit"
                 }
         }
@@ -237,7 +240,7 @@ saveBtn =
         , label =
             image
                 []
-                { src = "/web/static/assets/save-24px.svg"
+                { src = Asset.src Asset.save
                 , description = "save"
                 }
         }

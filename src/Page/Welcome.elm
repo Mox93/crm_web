@@ -1,7 +1,7 @@
 module Page.Welcome exposing (Model, Msg, init, subscriptions, toSession, update, view)
 
+import Asset
 import Brand
-import Browser
 import Element exposing (..)
 import Element.Background as Background
 import Element.Border as Border
@@ -127,8 +127,10 @@ update msg model =
         ShowWelcome ->
             ( Welcome session, Cmd.none )
 
-        GotSession session_ ->
-            ( Welcome session_, Cmd.none )
+        GotSession newSession ->
+            ( Welcome newSession
+            , Route.replaceUrl (Session.navKey newSession) Route.Welcome
+            )
 
 
 
@@ -152,17 +154,19 @@ view model =
             Welcome session ->
                 viewWelcomeCard session
 
-            CreateCompany session form ->
+            CreateCompany _ form ->
                 viewCreateForm form
 
-            JoinCompany session form ->
+            JoinCompany _ form ->
                 viewJoinForm form
     }
 
 
 viewWelcomeCard : Session -> Element Msg
 viewWelcomeCard session =
-    Layout.card <|
+    Layout.card
+        []
+    <|
         column
             [ spacing <| Brand.scaled 1
             ]
@@ -170,7 +174,7 @@ viewWelcomeCard session =
                 case Session.viewer session of
                     Just viewer ->
                         "Welcome "
-                            ++ (User.fullName <| Viewer.info viewer)
+                            ++ (.firstName <| Viewer.info viewer)
                             ++ "!"
 
                     Nothing ->
@@ -227,7 +231,9 @@ viewJoinBtn =
 
 viewCreateForm : NewCompanyForm -> Element Msg
 viewCreateForm form =
-    Layout.card <|
+    Layout.card
+        []
+    <|
         column
             [ spacing <| Brand.scaled 1
             ]
@@ -246,7 +252,9 @@ viewCreateForm form =
 
 viewJoinForm : JoinCompanyForm -> Element Msg
 viewJoinForm form =
-    Layout.card <|
+    Layout.card
+        []
+    <|
         column
             [ spacing <| Brand.scaled 1
             ]
@@ -268,7 +276,7 @@ viewBackBtn =
         { onPress = Just ShowWelcome
         , label =
             image []
-                { src = "web/static/assets/arrow_back_ios-24px.svg"
+                { src = Asset.src Asset.backArrow
                 , description = "Back"
                 }
         }

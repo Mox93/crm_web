@@ -2,13 +2,12 @@ module Page.Signup exposing (Model, Msg, init, subscriptions, toSession, update,
 
 import Api
 import Brand
-import Browser
 import Element exposing (..)
 import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
 import Element.Input as Input
-import ErrorHandling exposing (httpErrorToString)
+import ErrorHandling exposing (..)
 import Graphql.Http
 import Layout
 import RemoteData exposing (RemoteData(..))
@@ -28,19 +27,14 @@ type alias Form =
     , phoneNumber : String
     , password : String
     , showPassword : Bool
-    , agree : Bool
+    , agreement : Bool
     }
-
-
-type Problem
-    = InvalidEntry ValidatedField String
-    | ServerError String
 
 
 type alias Model =
     { session : Session
     , form : Form
-    , problems : List Problem
+    , problems : List (Problem ValidatedField)
     }
 
 
@@ -60,7 +54,7 @@ type Msg
     | ChangePhoneNumber String
     | ChangePassword String
     | ToggleShowPassword Bool
-    | ToggleAgree Bool
+    | ToggleAgreement Bool
     | SubmitForm
     | GotResponse (RemoteData (Graphql.Http.Error Viewer) Viewer)
     | GotSession Session
@@ -70,28 +64,55 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         ChangeFirstName firstName ->
-            updateForm (\form -> { form | firstName = firstName }) model
+            ( { model | problems = removeFieldError FirstName model.problems }
+                |> updateForm (\form -> { form | firstName = firstName })
+            , Cmd.none
+            )
 
         ChangeLastName lastName ->
-            updateForm (\form -> { form | lastName = lastName }) model
+            ( { model | problems = removeFieldError LastName model.problems }
+                |> updateForm (\form -> { form | lastName = lastName })
+            , Cmd.none
+            )
 
         ChangeEmail email ->
-            updateForm (\form -> { form | email = email }) model
+            ( { model | problems = removeFieldError Email model.problems }
+                |> updateForm (\form -> { form | email = email })
+            , Cmd.none
+            )
 
         ChangePhoneNumber phoneNumber ->
-            updateForm (\form -> { form | phoneNumber = phoneNumber }) model
+            ( { model | problems = removeFieldError PhoneNumber model.problems }
+                |> updateForm (\form -> { form | phoneNumber = phoneNumber })
+            , Cmd.none
+            )
 
         ChangePassword password ->
-            updateForm (\form -> { form | password = password }) model
+            ( { model | problems = removeFieldError Password model.problems }
+                |> updateForm (\form -> { form | password = password })
+            , Cmd.none
+            )
 
         ToggleShowPassword show ->
-            updateForm (\form -> { form | showPassword = show }) model
+            ( updateForm (\form -> { form | showPassword = show }) model
+            , Cmd.none
+            )
 
-        ToggleAgree agree ->
-            updateForm (\form -> { form | agree = agree }) model
+        ToggleAgreement agree ->
+            ( { model | problems = removeFieldError Agreement model.problems }
+                |> updateForm (\form -> { form | agreement = agree })
+            , Cmd.none
+            )
 
         SubmitForm ->
-            case validate model.form of
+            let
+                validation =
+                    validate
+                        (trimFields model.form)
+                        fieldsToValidate
+                        validateField
+            in
+            case validation of
                 Ok validForm ->
                     ( { model | problems = [] }
                     , Api.signup ((\(Trimmed form) -> form) validForm)
@@ -108,16 +129,18 @@ update msg model =
             case response of
                 Success viewer ->
                     ( model
-                    , Cmd.batch
-                        [ Viewer.store viewer
-                        , Route.replaceUrl (Session.navKey model.session) Route.Welcome
-                        ]
+                    , Viewer.store viewer
                     )
 
                 Failure err ->
                     case err of
                         Graphql.Http.GraphqlError _ gQLErr ->
-                            ( { model | problems = List.map (\e -> ServerError e.message) gQLErr }
+                            ( { model
+                                | problems =
+                                    List.concatMap
+                                        (graphqlErrorToProblem fieldsToValidate)
+                                        gQLErr
+                              }
                             , Cmd.none
                             )
 
@@ -131,13 +154,13 @@ update msg model =
 
         GotSession session ->
             ( { model | session = session }
-            , Route.replaceUrl (Session.navKey session) Route.Welcome
+            , Route.replaceUrl (Session.navKey session) Route.Signup
             )
 
 
-updateForm : (Form -> Form) -> Model -> ( Model, Cmd Msg )
+updateForm : (Form -> Form) -> Model -> Model
 updateForm transform model =
-    ( { model | form = transform model.form }, Cmd.none )
+    { model | form = transform model.form }
 
 
 
@@ -153,13 +176,6 @@ subscriptions model =
 -- FORM
 
 
-{-| Marks that we've trimmed the form's fields, so we don't accidentally send
-it to the server without having trimmed it!
--}
-type TrimmedForm
-    = Trimmed Form
-
-
 {-| When adding a variant here, add it to `fieldsToValidate` too!
 -}
 type ValidatedField
@@ -168,36 +184,22 @@ type ValidatedField
     | Email
     | PhoneNumber
     | Password
+    | Agreement
 
 
-fieldsToValidate : List ValidatedField
+fieldsToValidate : List ( String, ValidatedField )
 fieldsToValidate =
-    [ FirstName
-    , LastName
-    , Email
-    , PhoneNumber
-    , Password
+    [ ( "firstName", FirstName )
+    , ( "lastName", LastName )
+    , ( "email", Email )
+    , ( "phoneNumber", PhoneNumber )
+    , ( "password", Password )
+    , ( "agreement", Agreement )
     ]
 
 
-{-| Trim the form and validate its fields. If there are problems, report them!
--}
-validate : Form -> Result (List Problem) TrimmedForm
-validate form =
-    let
-        trimmedForm =
-            trimFields form
-    in
-    case List.concatMap (validateField trimmedForm) fieldsToValidate of
-        [] ->
-            Ok trimmedForm
-
-        problems ->
-            Err problems
-
-
-validateField : TrimmedForm -> ValidatedField -> List Problem
-validateField (Trimmed form) field =
+validateField : TrimmedForm Form -> ( String, ValidatedField ) -> List (Problem ValidatedField)
+validateField (Trimmed form) ( _, field ) =
     List.map (InvalidEntry field) <|
         case field of
             FirstName ->
@@ -235,11 +237,18 @@ validateField (Trimmed form) field =
                 else
                     []
 
+            Agreement ->
+                if form.agreement == False then
+                    [ "You must agree to the terms and conditions." ]
+
+                else
+                    []
+
 
 {-| Don't trim while the user is typing! That would be super annoying.
 Instead, trim only on submit.
 -}
-trimFields : Form -> TrimmedForm
+trimFields : Form -> TrimmedForm Form
 trimFields form =
     Trimmed
         { form
@@ -251,55 +260,23 @@ trimFields form =
         }
 
 
-problemToString : Problem -> String
-problemToString problem =
-    case problem of
-        InvalidEntry _ str ->
-            str
-
-        ServerError str ->
-            str
-
-
-isServerError : Problem -> Bool
-isServerError problem =
-    case problem of
-        ServerError _ ->
-            True
-
-        _ ->
-            False
-
-
-isFieldError : ValidatedField -> Problem -> Bool
-isFieldError field problem =
-    case problem of
-        InvalidEntry f _ ->
-            if f == field then
-                True
-
-            else
-                False
-
-        ServerError _ ->
-            False
-
-
 
 -- VIEW
 
 
 view : Model -> { title : String, body : Element Msg }
 view model =
-    { title = "Sign up"
+    { title = "Sign Up"
     , body =
         viewForm model.form model.problems
     }
 
 
-viewForm : Form -> List Problem -> Element Msg
+viewForm : Form -> List (Problem ValidatedField) -> Element Msg
 viewForm form problems =
-    Layout.card <|
+    Layout.card
+        []
+    <|
         column
             [ spacing <| Brand.scaled 1
             ]
@@ -321,7 +298,7 @@ viewForm form problems =
                 ]
 
             -- Errors
-            , viewErrors (List.filter isServerError problems)
+            , Layout.errNote (List.filter isServerError problems)
 
             -- Name
             , viewName form.firstName form.lastName problems
@@ -340,31 +317,15 @@ viewForm form problems =
                 (List.filter (isFieldError Password) problems)
 
             -- Terms & Conditions
-            , viewAgreement form.agree
+            , viewAgreement form.agreement
+                (List.filter (isFieldError Agreement) problems)
 
             -- Signup
             , viewSignupBtn
             ]
 
 
-viewErrors : List Problem -> Element msg
-viewErrors problems =
-    column
-        [ Font.color Brand.warningColor
-        , Font.size <| Brand.scaled -1
-        , width (maximum (Brand.scaled 15) fill)
-        ]
-    <|
-        List.map
-            (\err ->
-                paragraph
-                    []
-                    [ text <| "* " ++ problemToString err ]
-            )
-            problems
-
-
-viewName : String -> String -> List Problem -> Element Msg
+viewName : String -> String -> List (Problem ValidatedField) -> Element Msg
 viewName firstName lastName problems =
     let
         fnp =
@@ -388,12 +349,12 @@ viewName firstName lastName problems =
                 [ paddingXY 0 <| Brand.scaled -1
                 , Background.color Brand.transparent
                 , Brand.underlined 2
-                , case List.isEmpty fnp of
-                    True ->
-                        Border.color Brand.secondaryColorMuted
+                , Border.color <|
+                    if fnOk then
+                        Brand.secondaryColorMuted
 
-                    False ->
-                        Border.color Brand.warningColor
+                    else
+                        Brand.warningColor
                 , Border.rounded 0
                 , focused [ Border.color Brand.primaryColor ]
                 ]
@@ -401,32 +362,30 @@ viewName firstName lastName problems =
                 , text = firstName
                 , placeholder =
                     Just <|
-                        Input.placeholder []
-                            (el
-                                [ case fnOk of
-                                    True ->
-                                        Font.color Brand.subtleTextColor
+                        Input.placeholder
+                            [ Font.color <|
+                                if fnOk then
+                                    Brand.subtleTextColor
 
-                                    False ->
-                                        Font.color Brand.warningColor
-                                ]
-                                (text "First name")
-                            )
+                                else
+                                    Brand.warningColor
+                            ]
+                            (text "First name")
                 , label = Input.labelHidden "First Name"
                 }
             )
-            (viewErrors fnp)
+            fnp
         , Layout.withErrors
             (Input.text
                 [ paddingXY 0 <| Brand.scaled -1
                 , Background.color Brand.transparent
                 , Brand.underlined 2
-                , case List.isEmpty lnp of
-                    True ->
-                        Border.color Brand.secondaryColorMuted
+                , Border.color <|
+                    if lnOk then
+                        Brand.secondaryColorMuted
 
-                    False ->
-                        Border.color Brand.warningColor
+                    else
+                        Brand.warningColor
                 , Border.rounded 0
                 , focused [ Border.color Brand.primaryColor ]
                 ]
@@ -434,25 +393,23 @@ viewName firstName lastName problems =
                 , text = lastName
                 , placeholder =
                     Just <|
-                        Input.placeholder []
-                            (el
-                                [ case lnOk of
-                                    True ->
-                                        Font.color Brand.subtleTextColor
+                        Input.placeholder
+                            [ Font.color <|
+                                if lnOk then
+                                    Brand.subtleTextColor
 
-                                    False ->
-                                        Font.color Brand.warningColor
-                                ]
-                                (text "Last name")
-                            )
+                                else
+                                    Brand.warningColor
+                            ]
+                            (text "Last name")
                 , label = Input.labelHidden "Last Name"
                 }
             )
-            (viewErrors lnp)
+            lnp
         ]
 
 
-viewEmail : String -> List Problem -> Element Msg
+viewEmail : String -> List (Problem ValidatedField) -> Element Msg
 viewEmail email problems =
     let
         ok =
@@ -470,26 +427,24 @@ viewEmail email problems =
                 , text = email
                 , placeholder =
                     Just <|
-                        Input.placeholder []
-                            (el
-                                [ case ok of
-                                    True ->
-                                        Font.color Brand.subtleTextColor
+                        Input.placeholder
+                            [ Font.color <|
+                                if ok then
+                                    Brand.subtleTextColor
 
-                                    False ->
-                                        Font.color Brand.warningColor
-                                ]
-                                (text "Email")
-                            )
+                                else
+                                    Brand.warningColor
+                            ]
+                            (text "Email")
                 , label = Input.labelHidden "Email"
                 }
             ]
-            (List.isEmpty problems)
+            ok
         )
-        (viewErrors problems)
+        problems
 
 
-viewPhoneNumber : String -> List Problem -> Element Msg
+viewPhoneNumber : String -> List (Problem ValidatedField) -> Element Msg
 viewPhoneNumber phone problems =
     let
         ok =
@@ -507,26 +462,24 @@ viewPhoneNumber phone problems =
                 , text = phone
                 , placeholder =
                     Just <|
-                        Input.placeholder []
-                            (el
-                                [ case ok of
-                                    True ->
-                                        Font.color Brand.subtleTextColor
+                        Input.placeholder
+                            [ Font.color <|
+                                if ok then
+                                    Brand.subtleTextColor
 
-                                    False ->
-                                        Font.color Brand.warningColor
-                                ]
-                                (text "Phone number")
-                            )
+                                else
+                                    Brand.warningColor
+                            ]
+                            (text "Phone number")
                 , label = Input.labelHidden "Phone Number"
                 }
             ]
-            (List.isEmpty problems)
+            ok
         )
-        (viewErrors problems)
+        problems
 
 
-viewPassword : String -> Bool -> List Problem -> Element Msg
+viewPassword : String -> Bool -> List (Problem ValidatedField) -> Element Msg
 viewPassword password showPassword problems =
     let
         ok =
@@ -544,17 +497,15 @@ viewPassword password showPassword problems =
                 , text = password
                 , placeholder =
                     Just <|
-                        Input.placeholder []
-                            (el
-                                [ case ok of
-                                    True ->
-                                        Font.color Brand.subtleTextColor
+                        Input.placeholder
+                            [ Font.color <|
+                                if ok then
+                                    Brand.subtleTextColor
 
-                                    False ->
-                                        Font.color Brand.warningColor
-                                ]
-                                (text "Password")
-                            )
+                                else
+                                    Brand.warningColor
+                            ]
+                            (text "Password")
                 , label =
                     Input.labelHidden "Password"
                 , show = showPassword
@@ -567,37 +518,49 @@ viewPassword password showPassword problems =
                     Input.labelHidden "Show Password"
                 }
             ]
-            (List.isEmpty problems)
+            ok
         )
-        (viewErrors problems)
+        problems
 
 
-viewAgreement : Bool -> Element Msg
-viewAgreement rememberMe =
-    row
-        [ spacing <| Brand.scaled -3 ]
-        [ Input.checkbox [ width shrink ]
-            { onChange = ToggleAgree
-            , icon = Layout.radio
-            , checked = rememberMe
-            , label = Input.labelHidden "Terms & Conditions"
-            }
-        , row
-            [ Font.color Brand.subtleTextColor
-            , Font.size <| Brand.scaled 1
-            , alignTop
-            ]
-            [ text "I agree to the "
-            , link
-                [ Font.color Brand.primaryColor
-                , Font.semiBold
-                ]
-                { url = "#"
-                , label = text "Terms & Conditions"
+viewAgreement : Bool -> List (Problem ValidatedField) -> Element Msg
+viewAgreement agree problems =
+    let
+        ok =
+            List.isEmpty problems
+    in
+    Layout.withErrors
+        (row
+            [ spacing <| Brand.scaled -3 ]
+            [ Input.checkbox [ width shrink ]
+                { onChange = ToggleAgreement
+                , icon = Layout.radio ok
+                , checked = agree
+                , label =
+                    Input.labelRight [ centerY ] <|
+                        row
+                            [ Font.color <|
+                                if ok then
+                                    Brand.subtleTextColor
+
+                                else
+                                    Brand.warningColor
+                            , Font.size <| Brand.scaled 1
+                            , alignTop
+                            ]
+                            [ text "I agree to the "
+                            , link
+                                [ Font.color Brand.primaryColor
+                                , Font.semiBold
+                                ]
+                                { url = "#"
+                                , label = text "Terms & Conditions"
+                                }
+                            ]
                 }
-            , text "."
             ]
-        ]
+        )
+        problems
 
 
 viewSignupBtn : Element Msg

@@ -2,13 +2,13 @@ module Page.Home exposing (Model, Msg, init, subscriptions, toSession, update, v
 
 import Brand
 import Browser
+import Config exposing (Config, Language(..), Theme)
 import Element exposing (..)
 import Element.Background as Background
 import Html as H
 import Layout
-import Meta exposing (Language(..), Meta, Theme)
 import Route exposing (Route)
-import Session exposing (Session, meta)
+import Session exposing (Session, config)
 import Tabs exposing (Tabs)
 import User
 import Viewer
@@ -62,7 +62,7 @@ update msg model =
         ChangeLanguage lang ->
             let
                 meta =
-                    Session.meta model.session
+                    Session.config model.session
 
                 session =
                     { meta | language = lang }
@@ -73,7 +73,7 @@ update msg model =
         ChangeTheme theme ->
             let
                 meta =
-                    Session.meta model.session
+                    Session.config model.session
 
                 session =
                     { meta | theme = theme }
@@ -82,7 +82,9 @@ update msg model =
             init session
 
         GotSession session ->
-            ( { model | session = session }, Cmd.none )
+            ( { model | session = session }
+            , Route.replaceUrl (Session.navKey session) Route.Home
+            )
 
 
 
@@ -103,7 +105,8 @@ view model =
     { title = sectionName model.tabs.current
     , body =
         column
-            []
+            [ width fill
+            ]
         <|
             List.map (viewContent model.session) model.tabs.before
                 ++ [ viewContent model.session model.tabs.current ]
@@ -153,7 +156,6 @@ viewDark title =
         [ Background.color Brand.canvasColor
         , height (px 600)
         , width fill
-        , Brand.defaultBodyPadding
         ]
         [ el [ centerX ] <| text title ]
 
@@ -164,7 +166,6 @@ viewLight title =
         [ Background.color Brand.cardColor
         , height (px 600)
         , width fill
-        , Brand.defaultBodyPadding
         ]
         [ el [ centerX ] <| text title ]
 

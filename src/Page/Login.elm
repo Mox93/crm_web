@@ -2,13 +2,12 @@ module Page.Login exposing (Model, Msg, init, subscriptions, toSession, update, 
 
 import Api exposing (Cred)
 import Brand
-import Browser
 import Element exposing (..)
 import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
 import Element.Input as Input
-import ErrorHandling exposing (httpErrorToString)
+import ErrorHandling exposing (..)
 import Graphql.Http
 import Layout
 import RemoteData exposing (RemoteData(..))
@@ -29,15 +28,10 @@ type alias Form =
     }
 
 
-type Problem
-    = InvalidEntry ValidatedField String
-    | ServerError String
-
-
 type alias Model =
     { session : Session
     , form : Form
-    , problems : List Problem
+    , problems : List (Problem ValidatedField)
     }
 
 
@@ -64,19 +58,36 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         ChangeEmail email ->
-            updateForm (\form -> { form | email = email }) model
+            ( { model | problems = removeFieldError Email model.problems }
+                |> updateForm (\form -> { form | email = email })
+            , Cmd.none
+            )
 
         ChangePassword password ->
-            updateForm (\form -> { form | password = password }) model
-
-        ToggleRememberMe rememberMe ->
-            updateForm (\form -> { form | rememberMe = rememberMe }) model
+            ( { model | problems = removeFieldError Password model.problems }
+                |> updateForm (\form -> { form | password = password })
+            , Cmd.none
+            )
 
         ToggleShowPassword show ->
-            updateForm (\form -> { form | showPassword = show }) model
+            ( updateForm (\form -> { form | showPassword = show }) model
+            , Cmd.none
+            )
+
+        ToggleRememberMe rememberMe ->
+            ( updateForm (\form -> { form | rememberMe = rememberMe }) model
+            , Cmd.none
+            )
 
         SubmitForm ->
-            case validate model.form of
+            let
+                validation =
+                    validate
+                        (trimFields model.form)
+                        fieldsToValidate
+                        validateField
+            in
+            case validation of
                 Ok validForm ->
                     ( { model | problems = [] }
                     , Api.login ((\(Trimmed form) -> form) validForm)
@@ -93,16 +104,18 @@ update msg model =
             case response of
                 Success viewer ->
                     ( model
-                    , Cmd.batch
-                        [ Viewer.store viewer
-                        , Route.replaceUrl (Session.navKey model.session) Route.MyProfile
-                        ]
+                    , Viewer.store viewer
                     )
 
                 Failure err ->
                     case err of
                         Graphql.Http.GraphqlError _ gQLErr ->
-                            ( { model | problems = List.map (\e -> ServerError e.message) gQLErr }
+                            ( { model
+                                | problems =
+                                    List.concatMap
+                                        (graphqlErrorToProblem fieldsToValidate)
+                                        gQLErr
+                              }
                             , Cmd.none
                             )
 
@@ -116,13 +129,13 @@ update msg model =
 
         GotSession session ->
             ( { model | session = session }
-            , Route.replaceUrl (Session.navKey session) Route.Welcome
+            , Route.replaceUrl (Session.navKey session) Route.Login
             )
 
 
-updateForm : (Form -> Form) -> Model -> ( Model, Cmd Msg )
+updateForm : (Form -> Form) -> Model -> Model
 updateForm transform model =
-    ( { model | form = transform model.form }, Cmd.none )
+    { model | form = transform model.form }
 
 
 
@@ -138,13 +151,6 @@ subscriptions model =
 -- FORM
 
 
-{-| Marks that we've trimmed the form's fields, so we don't accidentally send
-it to the server without having trimmed it!
--}
-type TrimmedForm
-    = Trimmed Form
-
-
 {-| When adding a variant here, add it to `fieldsToValidate` too!
 -}
 type ValidatedField
@@ -152,31 +158,15 @@ type ValidatedField
     | Password
 
 
-fieldsToValidate : List ValidatedField
+fieldsToValidate : List ( String, ValidatedField )
 fieldsToValidate =
-    [ Email
-    , Password
+    [ ( "email", Email )
+    , ( "password", Password )
     ]
 
 
-{-| Trim the form and validate its fields. If there are problems, report them!
--}
-validate : Form -> Result (List Problem) TrimmedForm
-validate form =
-    let
-        trimmedForm =
-            trimFields form
-    in
-    case List.concatMap (validateField trimmedForm) fieldsToValidate of
-        [] ->
-            Ok trimmedForm
-
-        problems ->
-            Err problems
-
-
-validateField : TrimmedForm -> ValidatedField -> List Problem
-validateField (Trimmed form) field =
+validateField : TrimmedForm Form -> ( String, ValidatedField ) -> List (Problem ValidatedField)
+validateField (Trimmed form) ( _, field ) =
     List.map (InvalidEntry field) <|
         case field of
             Email ->
@@ -197,47 +187,13 @@ validateField (Trimmed form) field =
 {-| Don't trim while the user is typing! That would be super annoying.
 Instead, trim only on submit.
 -}
-trimFields : Form -> TrimmedForm
+trimFields : Form -> TrimmedForm Form
 trimFields form =
     Trimmed
         { form
             | email = String.trim form.email
             , password = String.trim form.password
         }
-
-
-problemToString : Problem -> String
-problemToString problem =
-    case problem of
-        InvalidEntry _ str ->
-            str
-
-        ServerError str ->
-            str
-
-
-isServerError : Problem -> Bool
-isServerError problem =
-    case problem of
-        ServerError _ ->
-            True
-
-        _ ->
-            False
-
-
-isFieldError : ValidatedField -> Problem -> Bool
-isFieldError field problem =
-    case problem of
-        InvalidEntry f _ ->
-            if f == field then
-                True
-
-            else
-                False
-
-        ServerError _ ->
-            False
 
 
 
@@ -252,9 +208,11 @@ view model =
     }
 
 
-viewForm : Form -> List Problem -> Element Msg
+viewForm : Form -> List (Problem ValidatedField) -> Element Msg
 viewForm form problems =
-    Layout.card <|
+    Layout.card
+        []
+    <|
         column
             [ spacing <| Brand.scaled 1
             , width (px <| Brand.scaled 15)
@@ -277,7 +235,7 @@ viewForm form problems =
                 ]
 
             -- Errors
-            , viewErrors (List.filter isServerError problems)
+            , Layout.errNote (List.filter isServerError problems)
 
             -- Email
             , viewEmail form.email
@@ -296,24 +254,7 @@ viewForm form problems =
             ]
 
 
-viewErrors : List Problem -> Element msg
-viewErrors problems =
-    column
-        [ Font.color Brand.warningColor
-        , Font.size <| Brand.scaled -1
-        , width (maximum (Brand.scaled 15) fill)
-        ]
-    <|
-        List.map
-            (\err ->
-                paragraph
-                    []
-                    [ text <| "* " ++ problemToString err ]
-            )
-            problems
-
-
-viewEmail : String -> List Problem -> Element Msg
+viewEmail : String -> List (Problem ValidatedField) -> Element Msg
 viewEmail email problems =
     let
         ok =
@@ -347,10 +288,10 @@ viewEmail email problems =
             ]
             ok
         )
-        (viewErrors problems)
+        problems
 
 
-viewPassword : String -> Bool -> List Problem -> Element Msg
+viewPassword : String -> Bool -> List (Problem ValidatedField) -> Element Msg
 viewPassword password showPassword problems =
     let
         ok =
@@ -393,7 +334,7 @@ viewPassword password showPassword problems =
             ]
             ok
         )
-        (viewErrors problems)
+        problems
 
 
 viewRememberMe : Bool -> Element Msg
@@ -402,16 +343,19 @@ viewRememberMe rememberMe =
         [ spacing <| Brand.scaled -3 ]
         [ Input.checkbox [ width shrink ]
             { onChange = ToggleRememberMe
-            , icon = Layout.radio
+            , icon = Layout.radio True
             , checked = rememberMe
-            , label = Input.labelHidden "Remember Me"
+            , label =
+                -- Input.labelHidden "Remember Me"
+                -- },
+                Input.labelRight
+                    [ Font.color Brand.subtleTextColor
+                    , Font.size <| Brand.scaled 1
+                    , alignTop
+                    , centerY
+                    ]
+                    (text "Remember Me")
             }
-        , el
-            [ Font.color Brand.subtleTextColor
-            , Font.size <| Brand.scaled 1
-            , alignTop
-            ]
-            (text "Remember Me")
         ]
 
 

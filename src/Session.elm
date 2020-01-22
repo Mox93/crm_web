@@ -1,8 +1,8 @@
-module Session exposing (Session, changes, cred, fromViewer, meta, navKey, updateMeta, viewer)
+module Session exposing (Session, changes, config, cred, fromViewer, navKey, updateMeta, user, viewer)
 
 import Api exposing (Cred)
 import Browser.Navigation as Nav
-import Meta exposing (Meta)
+import Config exposing (Config)
 import User exposing (User)
 import Viewer exposing (Viewer)
 
@@ -12,16 +12,16 @@ import Viewer exposing (Viewer)
 
 
 type Session
-    = Guest Meta Nav.Key
-    | LoggedIn Meta Nav.Key Viewer
+    = Guest Config Nav.Key
+    | LoggedIn Config Nav.Key Viewer
 
 
 
 -- INFO
 
 
-meta : Session -> Meta
-meta session =
+config : Session -> Config
+config session =
     case session of
         LoggedIn val _ _ ->
             val
@@ -79,7 +79,7 @@ changes toMsg key =
     Api.viewerChanges (\maybeViewer -> toMsg (fromViewer key maybeViewer)) Viewer.decoder
 
 
-updateMeta : Session -> Meta -> Session
+updateMeta : Session -> Config -> Session
 updateMeta session newMeta =
     case session of
         Guest _ key ->
@@ -96,7 +96,7 @@ fromViewer key maybeViewer =
     -- decode that String as JSON.
     case maybeViewer of
         Just viewerVal ->
-            LoggedIn Meta.defaults key viewerVal
+            LoggedIn Config.defaults key viewerVal
 
         Nothing ->
-            Guest Meta.defaults key
+            Guest Config.defaults key

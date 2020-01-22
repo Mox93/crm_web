@@ -42,6 +42,21 @@ login fillInOptionals requiredArgs object_ =
     Object.selectionForCompositeField "login" (optionalArgs ++ [ Argument.required "email" requiredArgs.email Encode.string, Argument.required "password" requiredArgs.password Encode.string ]) object_ identity
 
 
+logout : SelectionSet Bool RootQuery
+logout =
+    Object.selectionForField "Bool" "logout" [] Decode.bool
+
+
+refresh : SelectionSet String RootQuery
+refresh =
+    Object.selectionForField "String" "refresh" [] Decode.string
+
+
+avatar : SelectionSet (Maybe String) RootQuery
+avatar =
+    Object.selectionForField "(Maybe String)" "avatar" [] (Decode.string |> Decode.nullable)
+
+
 type alias CompanyRequiredArguments =
     { id : API.ScalarCodecs.Id }
 

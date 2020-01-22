@@ -4,7 +4,7 @@ import Browser.Navigation as Nav
 import Html exposing (Attribute)
 import Html.Attributes as Attributes
 import Url exposing (Url)
-import Url.Parser as Parser exposing ((</>), (<?>), Parser, fragment, int, map, oneOf, s, string, top)
+import Url.Parser as Parser exposing ((</>), (<?>), Parser, map, oneOf, s, top)
 
 
 
@@ -12,8 +12,8 @@ import Url.Parser as Parser exposing ((</>), (<?>), Parser, fragment, int, map, 
 
 
 type Route
-    = Home
-    | Root
+    = Root
+    | Home
     | Login
     | Logout
     | Signup
@@ -24,7 +24,8 @@ type Route
 parser : Parser (Route -> a) a
 parser =
     oneOf
-        [ map Home top
+        [ map Root top
+        , map Home (s "home")
         , map Login (s "login")
         , map Logout (s "logout")
         , map Signup (s "signup")
@@ -64,11 +65,11 @@ toString page =
 routeToPieces : Route -> List String
 routeToPieces page =
     case page of
-        Home ->
-            []
-
         Root ->
             []
+
+        Home ->
+            [ "home" ]
 
         Login ->
             [ "login" ]
